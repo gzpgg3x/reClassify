@@ -1,13 +1,13 @@
 Sub reClassify()
 
-    '//ROWS GROUPED, FORMAT PASTED, UNMATCHED CLASSIFICATION LISTED AT BOTTOM
-    '//TO ROLL OVER TO LAST TWELVE MONTHS
+    '//ROWS GROUPED, FORMAT PASTED, UNMATCHED CLASSIFICATION LISTED AT BOTTOM; ROLLED OVER TO LAST TWELVE MONTHS
+    '//TODOLIST: HARD-CODED ROWS, AND STATISTIC CALCULATION
     
     Reset
    
     Dim a, b, c, d, m, n, totClss, totBal, totTrnd As Integer
     Dim z, y, x, w, mySheetName, myRng, frmlStr As String
-    Dim trnd(1300, 4), trndNew(1500, 16), clss(1300, 17), bal(1320, 13), balPrior(1320, 13), myMap(300, 4), inpt(12, 4), inptPrior(12, 4) As Variant
+    Dim trnd(1300, 4), trndNew(1500, 16), clss(1300, 17), bal(1320, 13), balPrior(1320, 13), myMap(300, 4), inpt(12, 5), inptPrior(12, 5) As Variant
     
     '//READ IN "Input" FOR inpt() AND inptPrior()
     Worksheets("Input").Select
@@ -15,7 +15,7 @@ Sub reClassify()
         If Cells(41, a + 1) <> Cells(41, a) And a > 1 Then
             Exit For
         End If
-        For b = 1 To 4
+        For b = 1 To 5
             inpt(a, b) = Cells(b + 39, a + 1)
         Next b
     Next a
@@ -27,7 +27,7 @@ Sub reClassify()
             Exit For
         End If
         d = d + 1
-        For b = 1 To 4
+        For b = 1 To 5
             inptPrior(d, b) = Cells(b + 39, c + 1)
         Next b
     Next c
@@ -98,7 +98,7 @@ Sub reClassify()
     
 '    MsgBox clss(100, 3)
     
-    '//READ IN "MTD Trend" trnd(), ALSO CREATE AND POPULATE MAPPING TABLE myMap(), myMap() ALSO NEEDS TO STORE FORMAT MAPPING
+    '//READ IN "MTD Trend" trnd(), ALSO CREATE AND POPULATE MAPPING TABLE myMap(), myMap(). ALSO NEEDS TO STORE FORMAT MAPPING
      e = 0 '//counter of myMap()
      Worksheets("MTD Trend").Select
      For a = 1 To 1300
@@ -233,6 +233,17 @@ Sub reClassify()
                     Next b
                         
                 End If
+                
+                If trnd(a, 1) = "NET SALES - UNITS - HEARING AIDS incl L&H until Jan - Feb forward excl L & H" Then
+                    For b = 1 To totInpt
+                        w = ColNumToLetter(b + 2)
+                        Cells(e, w) = inpt(b, 5)
+                    Next b
+                    For b = 1 To totInptPrior
+                        w = ColNumToLetter(b + totInpt)
+                        Cells(e, w) = inptPrior(b, 5)
+                    Next b
+                End If
             ElseIf Len(trnd(a, 2)) > 0 Then '//IF THIS ROW IS FROM clss() OR A CACULATION OF OTHER ROWS LIKE SUBTOTAL OR PERCENTAGE
                 startRow = 0
                 endRow = 0
@@ -285,13 +296,13 @@ Sub reClassify()
     totTrndNew = c
     
 '     '//CREATE A NEW TAB "MTD Trend_new1"
-'     mySheetName = "MTD Trend_new1"
-'     Application.DisplayAlerts = False
-'     On Error Resume Next
-'     Worksheets(mySheetName).Delete
-'     Err.Clear
-'     Application.DisplayAlerts = True
-'     Worksheets.Add.Name = mySheetName
+     mySheetName = "MTD Trend_new1"
+     Application.DisplayAlerts = False
+     On Error Resume Next
+     Worksheets(mySheetName).Delete
+     Err.Clear
+     Application.DisplayAlerts = True
+     Worksheets.Add.Name = mySheetName
 '
 '     '//MAKE SURE THE MATCHED clss() IS CORRECT
 '     For a = 1 To 1277
@@ -312,9 +323,18 @@ Sub reClassify()
 '             Cells(a, b) = myMap(a, b)
 '         Next b
 '     Next a
+      '//MAKE SURE inpt() inptPrior() are correct
+      For a = 1 To totInpt
+          For b = 1 To 5
+              Cells(a, b) = inpt(a, b)
+          Next b
+      Next a
      
-     
-     
+      For a = totInpt + 1 To totInpt + totInptPrior
+          For b = 1 To 5
+              Cells(a + totInpt, b) = inptPrior(a, b)
+          Next b
+      Next a
      
      '//CREATE A NEW TAB "MTD Trend_new"
      mySheetName = "MTD Trend_new"
