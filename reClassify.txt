@@ -111,7 +111,7 @@ Sub reClassify()
         If Len(trnd(a, 1)) > 0 And (trnd(a, 2) > 999999 Or trnd(a, 2) < 100000) Then
             e = e + 1
             myMap(e, 1) = a
-            myMap(e, 2) = trnd(a, 1)
+            myMap(e, 2) = trnd(a, 1) & trnd(a, 2)
             myMap(e, 4) = "F" '//myMap's SECTION FOR FORMAT BETWEEN OLD AND NEW, "F" STANDS FOR FORMAT
         End If
         myRng = "C" & Trim(Str(a))
