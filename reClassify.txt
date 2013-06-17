@@ -234,16 +234,32 @@ Sub reClassify()
                         
                 End If
                 
-                If trnd(a, 1) = "NET SALES - UNITS - HEARING AIDS incl L&H until Jan - Feb forward excl L & H" Then
+'                If c = 623 Then
+'                    MsgBox trndNew(c, 1)
+'                End If
+                
+                If trndNew(c, 1) = "NET SALES - UNITS - HEARING AIDS incl L&H until Jan - Feb forward excl L & H" Then '//HARDCODED ROW
                     For b = 1 To totInpt
-                        w = ColNumToLetter(b + 2)
-                        Cells(e, w) = inpt(b, 5)
+'                        w = ColNumToLetter(b + 2)
+                        trndNew(c, b + 2) = inpt(b, 5)
+                        
+'                        If c = 623 And b = 2 Then
+'                            MsgBox inpt(b, 5)
+'                            MsgBox trndNew(c, b + 2)
+'                        End If
+                        
                     Next b
                     For b = 1 To totInptPrior
-                        w = ColNumToLetter(b + totInpt)
-                        Cells(e, w) = inptPrior(b, 5)
+'                        w = ColNumToLetter(b + totInpt)
+                        trndNew(c, b + 2 + totInpt) = inptPrior(b, 5)
                     Next b
                 End If
+                
+'                If c = 623 Then
+'                    MsgBox inpt(2, 5)
+'                    MsgBox trndNew(c, 4)
+'                End If
+                
             ElseIf Len(trnd(a, 2)) > 0 Then '//IF THIS ROW IS FROM clss() OR A CACULATION OF OTHER ROWS LIKE SUBTOTAL OR PERCENTAGE
                 startRow = 0
                 endRow = 0
