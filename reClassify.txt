@@ -1,4 +1,4 @@
-Sub reClassify_backup()
+Sub reClassify()
 
     '//ROWS GROUPED, FORMAT PASTED, UNMATCHED CLASSIFICATION LISTED AT BOTTOM
     '//TO ROLL OVER TO LAST TWELVE MONTHS
@@ -140,13 +140,13 @@ Sub reClassify_backup()
                             If Not IsNumeric(Mid(frmlStr, d, 1)) Then
                                 e = e + 1
                                 myMap(e, 1) = Val(Mid(frmlStr, c + 1, d - c - 1))
-                                myMap(e, 2) = trnd(myMap(e, 1), 1)
+                                myMap(e, 2) = trnd(myMap(e, 1), 1) & trnd(myMap(e, 1), 2)
                                 Exit For
                             End If
                             If d = Len(frmlStr) Then
                                 e = e + 1
                                 myMap(e, 1) = Val(Mid(frmlStr, c + 1, d - c))
-                                myMap(e, 2) = trnd(myMap(e, 1), 1)
+                                myMap(e, 2) = trnd(myMap(e, 1), 1) & trnd(myMap(e, 1), 2)
                                 Exit For
                             End If
                         Next d
@@ -174,7 +174,7 @@ Sub reClassify_backup()
                 Next b
                 
                 For e = 1 To totMyMap '//MATCH myMap TO POPULATE NEW ROW NUMBER COLUMN
-                    If myMap(e, 2) = trndNew(c, 1) Then
+                    If myMap(e, 2) = trndNew(c, 1) & trndNew(c, 2) Then
                         myMap(e, 3) = c
                     End If
                 Next e
@@ -246,7 +246,7 @@ Sub reClassify_backup()
                         Next d
                         clss(b, 17) = "M" '//ADD A FLAG TO clss() THAT THIS ACCOUNT BALANCE IS "MATCHED"
                         For e = 1 To totMyMap
-                            If myMap(e, 2) = trndNew(c, 1) Then
+                            If myMap(e, 2) = trndNew(c, 1) & trndNew(c, 2) Then
                                 myMap(e, 3) = c
                             End If
                         Next e
@@ -275,7 +275,7 @@ Sub reClassify_backup()
                 End If
                 
                 For e = 1 To totMyMap
-                    If myMap(e, 2) = trndNew(c, 1) Then
+                    If myMap(e, 2) = trndNew(c, 1) & trndNew(c, 2) Then
                         myMap(e, 3) = c
                     End If
                 Next e
@@ -399,8 +399,6 @@ Function ColNumToLetter(a) As String
         ColNumToLetter = Chr(a + 64)
     End If
 End Function
-
-
 
 
 
