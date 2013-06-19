@@ -6,8 +6,8 @@ Sub reClassify()
     Reset
    
     Dim a, b, c, d, m, n, totClss, totBal, totTrnd As Integer
-    Dim z, y, x, w, mySheetName, myRng, frmlStr As String
-    Dim trnd(1300, 4), trndNew(1500, 16), clss(1300, 17), bal(1320, 13), balPrior(1320, 13), myMap(300, 4), inpt(12, 5), inptPrior(12, 5) As Variant
+    Dim z, y, x, w, mySheetName, myRng, frmlStr, drmHd As String
+    Dim trnd(1300, 4), trndNew(1500, 16), clss(1300, 17), bal(1320, 13), balPrior(1320, 13), myMap(300, 4), inpt(12, 5), inptPrior(12, 5), stat(40, 2) As Variant
     
     '//READ IN "Input" FOR inpt() AND inptPrior()
     Worksheets("Input").Select
@@ -32,10 +32,10 @@ Sub reClassify()
         Next b
     Next c
     totInptPrior = d
-'    MsgBox totInptPrior
     
-    '//READ IN "GL Classification Input" clss()
+    '//READ IN "GL Classification Input" clss(), MEANWHILE CREATE TABLE stat()
     Worksheets("GL Classification Input").Select
+    b = 0 '//COUNTER FOR stat()
     For a = 1 To 1300
         If Len(Cells(a, 1)) + Len(Cells(a, 2)) + Len(Cells(a, 3)) + Len(Cells(a, 4)) + Len(Cells(a, 5)) + Len(Cells(a, 6)) + Len(Cells(a, 7)) + Len(Cells(a, 8)) + Len(Cells(a, 9)) + Len(Cells(a, 10)) = 0 Then
             Exit For
@@ -43,10 +43,15 @@ Sub reClassify()
         clss(a, 1) = Cells(a, 3) '//ACCOUNT NUMBER
         clss(a, 2) = Cells(a, 10) '//ACCOUNT CLASSIFICATION
         clss(a, 3) = Cells(a, 1) '//ACCOUNT DESCRIPTION
+        If Len(Cells(a, 11)) > 0 Then
+            b = b + 1
+            stat(b, 1) = Cells(a, 1)
+            stat(b, 2) = Cells(a, 11)
+        End If
     Next a
     totClss = a - 1
+    totStat = b
     
-'    MsgBox inpt(1, 4)
     '//READ IN "CY TB CALC" FOR bal(), AND "PY TB CALC" FOR balPrior()
     Worksheets(inpt(1, 2)).Select
     For a = 1 To 1320
@@ -60,7 +65,6 @@ Sub reClassify()
 
     Next a
     totBal = a - 1
-'    MsgBox "bal(100, 1)=" & bal(100, 1)
     
     Worksheets(inptPrior(1, 2)).Select
     For a = 1 To 1320
@@ -74,10 +78,7 @@ Sub reClassify()
 
     Next a
     totBalPrior = a - 1
-'    MsgBox bal(102, 9)
-     
-'    MsgBox clss(137, 1)
-'    MsgBox "bal(104, 1)=" & bal(104, 1)
+
     '//MATCHMAKING clss(), bal() AND balPrior() TO UPDATE clss()
     For a = 1 To totClss
         For b = 1 To totBal
@@ -91,12 +92,6 @@ Sub reClassify()
             End If
         Next b
     Next a
-    
-    
-    
-    
-    
-'    MsgBox clss(100, 3)
     
     '//READ IN "MTD Trend" trnd(), ALSO CREATE AND POPULATE MAPPING TABLE myMap(), myMap(). ALSO NEEDS TO STORE FORMAT MAPPING
      e = 0 '//counter of myMap()
@@ -163,6 +158,7 @@ Sub reClassify()
      totMyMap = e
     
     '//MATCHMAKING trnd() AND clss(), USING map() TO RESTORE FORMULAS
+    drmHd = "="
     c = 0 '//counter of trndNew()
     For a = 1 To totTrnd
         If InStr(1, trnd(a, 3), "!", 1) = 0 Then
@@ -234,32 +230,28 @@ Sub reClassify()
                         
                 End If
                 
-'                If c = 623 Then
-'                    MsgBox trndNew(c, 1)
-'                End If
-                
                 If trndNew(c, 1) = "NET SALES - UNITS - HEARING AIDS incl L&H until Jan - Feb forward excl L & H" Then '//HARDCODED ROW
                     For b = 1 To totInpt
-'                        w = ColNumToLetter(b + 2)
                         trndNew(c, b + 2) = inpt(b, 5)
-                        
-'                        If c = 623 And b = 2 Then
-'                            MsgBox inpt(b, 5)
-'                            MsgBox trndNew(c, b + 2)
-'                        End If
                         
                     Next b
                     For b = 1 To totInptPrior
-'                        w = ColNumToLetter(b + totInpt)
                         trndNew(c, b + 2 + totInpt) = inptPrior(b, 5)
                     Next b
                 End If
-                
-'                If c = 623 Then
-'                    MsgBox inpt(2, 5)
-'                    MsgBox trndNew(c, 4)
-'                End If
-                
+
+                If trndNew(c, 1) = "Dream HAID Sales" Then
+                    For b = 3 To 15
+                        w = ColNumToLetter(b)
+                        
+                        For d = 1 To Len(drmHd)
+                            If Mid(drmHd, d, 1) = " " Then
+                                drmHd = Left(drmHd, InStr(1, drmHd, " ", 1) - 1) & w & Right(drmHd, Len(drmHd) - InStr(1, drmHd, " ", 1))
+                            End If
+                        Next d
+                    Next b
+                End If
+                             
             ElseIf Len(trnd(a, 2)) > 0 Then '//IF THIS ROW IS FROM clss() OR A CACULATION OF OTHER ROWS LIKE SUBTOTAL OR PERCENTAGE
                 startRow = 0
                 endRow = 0
@@ -268,6 +260,14 @@ Sub reClassify()
                         c = c + 1
                         trndNew(c, 1) = clss(b, 3)
                         trndNew(c, 2) = clss(b, 1)
+                        
+                        For d = 1 To totStat
+                            If trndNew(c, 1) = stat(d, 1) Then
+                                drmHd = drmHd & "+ " & Trim(Str(c))
+                                Exit For
+                            End If
+                        Next d
+                        
                         For d = 3 To 15
                             trndNew(c, d) = clss(b, d + 1)
                         Next d
@@ -282,17 +282,23 @@ Sub reClassify()
                             startRow = c
                         End If
                         endRow = c
-    '                        trndNew(c, 4) = startRow & " | " & endRow
                     End If
                 Next b
                 c = c + 1
 
                 trndNew(c, 1) = trnd(a, 1)
                 trndNew(c, 2) = trnd(a, 2)
+                
+'                    If c = 8 Then
+'                        MsgBox trndNew(c, 1)
+'                        MsgBox a
+'                    End If
                 For b = 3 To totInpt + totInptPrior + 2
                     w = ColNumToLetter(b)
                     trndNew(c, b) = "=SUM(" & w & Trim(Str(startRow)) & ":" & w & Trim(Str(endRow)) & ")" '//SUBTOTAL ALL ACC BAL UNDER ONE CATEGORY
+              
                 Next b
+                
                 If startRow = 0 Or endRow = 0 Then
                     For b = 3 To totInpt + totInptPrior + 2
                         trndNew(c, b) = 0
@@ -306,19 +312,21 @@ Sub reClassify()
                         myMap(e, 3) = c
                     End If
                 Next e
+                
             End If
         End If
     Next a
     totTrndNew = c
+'    MsgBox trndNew(8, 1)
     
 '     '//CREATE A NEW TAB "MTD Trend_new1"
-     mySheetName = "MTD Trend_new1"
-     Application.DisplayAlerts = False
-     On Error Resume Next
-     Worksheets(mySheetName).Delete
-     Err.Clear
-     Application.DisplayAlerts = True
-     Worksheets.Add.Name = mySheetName
+'     mySheetName = "MTD Trend_new1"
+'     Application.DisplayAlerts = False
+'     On Error Resume Next
+'     Worksheets(mySheetName).Delete
+'     Err.Clear
+'     Application.DisplayAlerts = True
+'     Worksheets.Add.Name = mySheetName
 '
 '     '//MAKE SURE THE MATCHED clss() IS CORRECT
 '     For a = 1 To 1277
@@ -339,18 +347,26 @@ Sub reClassify()
 '             Cells(a, b) = myMap(a, b)
 '         Next b
 '     Next a
+
       '//MAKE SURE inpt() inptPrior() are correct
-      For a = 1 To totInpt
-          For b = 1 To 5
-              Cells(a, b) = inpt(a, b)
-          Next b
-      Next a
-     
-      For a = totInpt + 1 To totInpt + totInptPrior
-          For b = 1 To 5
-              Cells(a + totInpt, b) = inptPrior(a, b)
-          Next b
-      Next a
+'      For a = 1 To totInpt
+'          For b = 1 To 5
+'              Cells(a, b) = inpt(a, b)
+'          Next b
+'      Next a
+'
+'      For a = totInpt + 1 To totInpt + totInptPrior
+'          For b = 1 To 5
+'              Cells(a + totInpt, b) = inptPrior(a, b)
+'          Next b
+'      Next a
+
+    '//MAKE SURE stat() is correct
+'    For a = 1 To totStat
+'        For b = 1 To 2
+'            Cells(a, b) = stat(a, b)
+'        Next b
+'    Next a
      
      '//CREATE A NEW TAB "MTD Trend_new"
      mySheetName = "MTD Trend_new"
@@ -362,13 +378,13 @@ Sub reClassify()
      Worksheets.Add.Name = mySheetName
 
      '//MAKE SURE THE myMap() CORRECT
-'     For a = 1 To 300
-'         For b = 1 To 2
-'             Cells(a, b) = myMap(a, b)
-'         Next b
-'     Next a
+     For a = 1 To 300
+         For b = 1 To 2
+             Cells(a, b) = myMap(a, b)
+         Next b
+     Next a
 
-     '//MAKE SURE THE trndNew() CORRECT
+'     //MAKE SURE THE trndNew() CORRECT
      For a = 1 To totTrndNew
          For b = 1 To 15
              Cells(a, b) = trndNew(a, b)
@@ -382,12 +398,12 @@ Sub reClassify()
 '            ActiveSheet.Outline.ShowLevels RowLevels:=2
          End If
      Next a
-     
+
      '//MONTHS ARE ADDED ON THE TOP
      For a = 1 To totInpt
          Cells(5, a + 2) = inpt(a, 1)
      Next a
-     
+
      For a = 1 To totInptPrior
          Cells(5, a + 2 + totInpt) = inptPrior(a, 1)
      Next a
