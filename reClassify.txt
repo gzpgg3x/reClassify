@@ -20,19 +20,21 @@ Sub reClassify()
         Next b
     Next a
     totInpt = a - 1
-    
+'MsgBox totInpt
     d = 0
-    For c = a To 14
-        If Len(Cells(39, c + 1)) + Len(Cells(40, c + 1)) + Len(Cells(41, c + 1)) = 0 Then
+    For c = a + 1 To 14
+        If Len(Cells(40, c)) = 0 Or Len(Cells(41, c)) = 0 Or Len(Cells(42, c)) = 0 Or Len(Cells(43, c)) = 0 Then
+'        If Len(Cells(39, c + 1)) = 0 Or Len(Cells(40, c + 1)) = 0 Or Len(Cells(41, c + 1)) = 0 Then
+'        If Len(Cells(39, c + 1)) + Len(Cells(40, c + 1)) + Len(Cells(41, c + 1)) = 0 Then
             Exit For
         End If
         d = d + 1
         For b = 1 To 5
-            inptPrior(d, b) = Cells(b + 39, c + 1)
+            inptPrior(d, b) = Cells(b + 39, c)
         Next b
     Next c
     totInptPrior = d
-    
+'    MsgBox totInptPrior
     '//READ IN "GL Classification Input" clss(), MEANWHILE CREATE TABLE stat()
     Worksheets("GL Classification Input").Select
     b = 0 '//COUNTER FOR stat()
@@ -65,7 +67,7 @@ Sub reClassify()
 
     Next a
     totBal = a - 1
-    
+    MsgBox inptPrior(1, 1)
     Worksheets(inptPrior(1, 2)).Select
     For a = 1 To 1320
         If Len(Cells(a, 1)) + Len(Cells(a, 3)) + Len(Cells(a, 25)) = 0 Then
