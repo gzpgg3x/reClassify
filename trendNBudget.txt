@@ -1,40 +1,61 @@
 Sub trendNbudget()
 
-    '//ROWS GROUPED, FORMAT PASTED, UNMATCHED CLASSIFICATION LISTED AT BOTTOM; ROLLED OVER TO LAST TWELVE MONTHS
-    '//TODOLIST: HARD-CODED ROWS, AND STATISTIC CALCULATION
+    '//TODOLIST: COMBINE TREND REPORT AND BUDGET REPORT
+    '//STATUS: NUMBERS ARE CORRECT, NOW NEED TO WORK ON FORMAT
     
     Reset
    
-    Dim a, b, c, d, m, n, totClss, totBal, totTrnd As Integer
+    Dim a, b, c, d, m, n, totClss, totBal, totTrnd, totBdgt, totBudgtMap, tot As Integer
     Dim z, y, x, w, mySheetName, myRng, frmlStr, drmHd As String
-    Dim trnd(1300, 4), trndNew(1500, 16), clss(1300, 17), bal(1320, 13), balPrior(1320, 13), myMap(300, 4), inpt(12, 5), inptPrior(12, 5), stat(40, 2) As Variant
+    Dim trnd(1300, 4), trndNew(1500, 17), clss(1300, 17), bal(1320, 13), balPrior(1320, 13), myMap(300, 4), inpt(12, 5), inptPrior(12, 5), stat(40, 2), inptBdgt(4), bdgt(120, 2), bdgtMap(100, 3) As Variant
     
-    '//READ IN "Input" FOR inpt() AND inptPrior()
+    '//READ IN "Input" FOR inpt(), inptPrior(), inptBdgt() AND bdgtMap()
+    '//NOTE: TO REVISIT LATER FOR HANDLING INCOMPLETE SITUATIONS LIKE SOME CELLS LEFT BLANK
     Worksheets("Input").Select
     For a = 1 To 14
         If Cells(41, a + 1) <> Cells(41, a) And a > 1 Then
             Exit For
         End If
         For b = 1 To 5
-            inpt(a, b) = Cells(b + 39, a + 1)
+            inpt(a, b) = Cells(b + 39, a + 1) '//READ IN "Input" FOR inpt()
         Next b
     Next a
     totInpt = a - 1
-'MsgBox totInpt
+
     d = 0
     For c = a + 1 To 14
         If Len(Cells(40, c)) = 0 Or Len(Cells(41, c)) = 0 Or Len(Cells(42, c)) = 0 Or Len(Cells(43, c)) = 0 Then
-'        If Len(Cells(39, c + 1)) = 0 Or Len(Cells(40, c + 1)) = 0 Or Len(Cells(41, c + 1)) = 0 Then
-'        If Len(Cells(39, c + 1)) + Len(Cells(40, c + 1)) + Len(Cells(41, c + 1)) = 0 Then
             Exit For
         End If
         d = d + 1
         For b = 1 To 5
-            inptPrior(d, b) = Cells(b + 39, c)
+            inptPrior(d, b) = Cells(b + 39, c) '//READ IN "Input" FOR inptPrior()
         Next b
     Next c
     totInptPrior = d
-'    MsgBox totInptPrior
+    
+    c = 0
+    For a = 47 To 96
+        If Len(Cells(a, 1)) > 0 And Len(Cells(a, 2)) > 0 Then
+            c = c + 1
+            bdgtMap(c, 1) = Cells(a, 1) '//READ IN "Input" FOR bdgtMap()
+            bdgtMap(c, 2) = Cells(a, 2) '//READ IN "Input" FOR bdgtMap()
+'            If c = 25 Then
+'                MsgBox bdgtMap(c, 1)
+'            End If
+        ElseIf Len(Cells(a, 1)) + Len(Cells(a, 2)) = 0 Then
+            Exit For
+        End If
+    Next a
+    totBdgtMap = c
+    MsgBox totBdgtMap
+    
+    '//READ IN "Input" FOR inptBdgt()
+    inptBdgt(1) = Cells(40, 15)
+    inptBdgt(2) = Cells(41, 15)
+    inptBdgt(3) = Cells(42, 15)
+    inptBdgt(4) = Cells(43, 15)
+
     '//READ IN "GL Classification Input" clss(), MEANWHILE CREATE TABLE stat()
     Worksheets("GL Classification Input").Select
     b = 0 '//COUNTER FOR stat()
@@ -67,7 +88,7 @@ Sub trendNbudget()
 
     Next a
     totBal = a - 1
-    MsgBox inptPrior(1, 1)
+'    MsgBox inptPrior(1, 1)
     Worksheets(inptPrior(1, 2)).Select
     For a = 1 To 1320
         If Len(Cells(a, 1)) + Len(Cells(a, 3)) + Len(Cells(a, 25)) = 0 Then
@@ -80,6 +101,29 @@ Sub trendNbudget()
 
     Next a
     totBalPrior = a - 1
+    
+    '//READ IN TAB "Budget" for bdgt()
+    Worksheets(inptBdgt(2)).Select
+    For a = 1 To 120
+
+        bdgt(a, 1) = Cells(a, inptBdgt(4))
+        bdgt(a, 2) = "=" & inptBdgt(2) & "!" & inptBdgt(3) & Trim(Str(a))
+        
+        If Cells(a, inptBdgt(4)) = "Net result after minorities" Then
+            Exit For
+        End If
+    Next a
+    totBdgt = a
+    
+    '//MATCHMAKING bdgtMap() AND budgt() TO MAKE NEW bdgtMap()
+    For a = 1 To totBdgtMap
+        For b = 1 To totBdgt
+            If bdgtMap(a, 2) = bdgt(b, 1) Then
+                bdgtMap(a, 3) = bdgt(b, 2)
+                Exit For
+            End If
+        Next b
+    Next a
 
     '//MATCHMAKING clss(), bal() AND balPrior() TO UPDATE clss()
     For a = 1 To totClss
@@ -95,9 +139,9 @@ Sub trendNbudget()
         Next b
     Next a
     
-    '//READ IN "MTD Trend" trnd(), ALSO CREATE AND POPULATE MAPPING TABLE myMap(), myMap(). ALSO NEEDS TO STORE FORMAT MAPPING
+    '//READ IN "REPORT" trnd(), ALSO CREATE AND POPULATE MAPPING TABLE myMap(), myMap(). ALSO NEEDS TO STORE FORMAT MAPPING
      e = 0 '//counter of myMap()
-     Worksheets("MTD Trend").Select
+     Worksheets("REPORT").Select
      For a = 1 To 1300
 '        If Cells(a, 1) = "NET RESULTS" Then
 '            Exit For
@@ -291,10 +335,6 @@ Sub trendNbudget()
                 trndNew(c, 1) = trnd(a, 1)
                 trndNew(c, 2) = trnd(a, 2)
                 
-'                    If c = 8 Then
-'                        MsgBox trndNew(c, 1)
-'                        MsgBox a
-'                    End If
                 For b = 3 To totInpt + totInptPrior + 2
                     w = ColNumToLetter(b)
                     trndNew(c, b) = "=SUM(" & w & Trim(Str(startRow)) & ":" & w & Trim(Str(endRow)) & ")" '//SUBTOTAL ALL ACC BAL UNDER ONE CATEGORY
@@ -319,16 +359,48 @@ Sub trendNbudget()
         End If
     Next a
     totTrndNew = c
-'    MsgBox trndNew(8, 1)
     
-'     '//CREATE A NEW TAB "MTD Trend_new1"
-'     mySheetName = "MTD Trend_new1"
-'     Application.DisplayAlerts = False
-'     On Error Resume Next
-'     Worksheets(mySheetName).Delete
-'     Err.Clear
-'     Application.DisplayAlerts = True
-'     Worksheets.Add.Name = mySheetName
+    '//MATCH MAKING trndNew() AND bdgt() TO MAKE UPDATED trndNew()
+    For a = 1 To totTrndNew
+        For b = 1 To totBdgt
+            If trndNew(a, 1) = bdgt(b, 1) And Len(trndNew(a, 1)) + Len(bdgt(b, 1)) > 0 Then
+                trndNew(a, 17) = "=" & inptBdgt(2) & "!" & inptBdgt(3) & Trim(Str(b))     '//bdgt(b, 2)
+            End If
+        Next b
+    Next a
+    
+    '//MATCH MAKING trndNew() AND bdgtMap() TO MAKE UPDATED trndNew()
+    For a = 1 To totTrndNew
+        For b = 1 To totBdgtMap
+            If trndNew(a, 1) = bdgtMap(b, 1) And Len(trndNew(a, 1)) + Len(bdgtMap(b, 1)) > 0 Then
+                trndNew(a, 17) = bdgtMap(b, 3)
+            End If
+        Next b
+    Next a
+    
+    
+     '//CREATE A NEW TAB "REPORT_new1"
+     mySheetName = "REPORT_new1"
+     Application.DisplayAlerts = False
+     On Error Resume Next
+     Worksheets(mySheetName).Delete
+     Err.Clear
+     Application.DisplayAlerts = True
+     Worksheets.Add.Name = mySheetName
+     
+      '//MAKE SURE THE bdgt() IS CORRECT
+      For a = 1 To totBdgt
+          For b = 1 To 2
+              Cells(a, b) = bdgt(a, b)
+          Next b
+      Next a
+
+'      '//MAKE SURE THE bdgtMap() IS CORRECT
+'      For a = 1 To totBdgtMap
+'          For b = 1 To 3
+'              Cells(a, b) = bdgtMap(a, b)
+'          Next b
+'      Next a
 '
 '     '//MAKE SURE THE MATCHED clss() IS CORRECT
 '     For a = 1 To 1277
@@ -370,8 +442,8 @@ Sub trendNbudget()
 '        Next b
 '    Next a
      
-     '//CREATE A NEW TAB "MTD Trend_new"
-     mySheetName = "MTD Trend_new"
+     '//CREATE A NEW TAB "REPORT_new"
+     mySheetName = "REPORT_new"
      Application.DisplayAlerts = False
      On Error Resume Next
      Worksheets(mySheetName).Delete
@@ -379,16 +451,24 @@ Sub trendNbudget()
      Application.DisplayAlerts = True
      Worksheets.Add.Name = mySheetName
 
-     '//MAKE SURE THE myMap() CORRECT
-     For a = 1 To 300
-         For b = 1 To 2
-             Cells(a, b) = myMap(a, b)
-         Next b
-     Next a
+'      For a = 1 To totBdgtMap
+'          For b = 1 To 3
+'              Cells(a, b) = bdgtMap(a, b)
+'          Next b
+'      Next a
 
+'
+'     '//MAKE SURE THE myMap() CORRECT
+''     For a = 1 To 300
+''         For b = 1 To 2
+''             Cells(a, b) = myMap(a, b)
+''         Next b
+''     Next a
+'
 '     //MAKE SURE THE trndNew() CORRECT
      For a = 1 To totTrndNew
-         For b = 1 To 15
+'         For b = 1 To 15
+         For b = 1 To 3
              Cells(a, b) = trndNew(a, b)
          Next b
 
@@ -399,6 +479,8 @@ Sub trendNbudget()
              'Show groups
 '            ActiveSheet.Outline.ShowLevels RowLevels:=2
          End If
+
+         Cells(a, 17) = trndNew(a, 17)
      Next a
 
      '//MONTHS ARE ADDED ON THE TOP
@@ -424,15 +506,15 @@ Sub trendNbudget()
          End If
      Next a
 
-     '//COPY FORMAT FROM "MTD Trend" TO "MTD Trend_new"
+     '//COPY FORMAT FROM "REPORT" TO "REPORT_new"
     For a = 1 To totMyMap
         If myMap(a, 4) = "F" Then
             b = myMap(a, 1)
             c = myMap(a, 3)
             srcRng = "A" & Trim(Str(b)) & ":O" & Trim(Str(b))
             trgtRng = "A" & Trim(Str(c)) & ":O" & Trim(Str(c))
-            Sheets("MTD Trend").Range(srcRng).Copy
-            Sheets("MTD Trend_new").Range(trgtRng).PasteSpecial xlPasteFormats
+            Sheets("REPORT").Range(srcRng).Copy
+            Sheets("REPORT_new").Range(trgtRng).PasteSpecial xlPasteFormats
         End If
     Next a
 End Sub
@@ -453,6 +535,3 @@ Function ColNumToLetter(a) As String
         ColNumToLetter = Chr(a + 64)
     End If
 End Function
-
-
-
