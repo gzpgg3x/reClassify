@@ -1,0 +1,690 @@
+Sub trendNbudget_demo()
+
+    '//TODOLIST: COMBINE TREND REPORT AND BUDGET REPORT
+    '//BEFORE WORKING ON YTD
+    
+    Reset
+   
+    Dim a, b, c, d, m, n, totClss, totBal, totTrnd, totBdgt, totBudgtMap, totInptBdgt As Integer
+    Dim z, y, x, w, mySheetName, myRng, frmlStr, drmHd As String
+    Dim trnd(1300, 4), trndNew(1500, 28), clss(1300, 17), bal(1320, 13), balPrior(1320, 13), inpt(12, 5), inptPrior(12, 5), stat(40, 2), bdgt(120, 13) As Variant
+    Dim myMap(300, 4) As Variant '//OLD ROW, trnd(a,1)+trnd(a,2), NEW ROW, "F" FOR FORMAT
+    Dim myTab(2) As Variant '//SOURCE TAB, TARGET TAB
+    Dim inptBdgt(12, 4) As Variant '//BUDGET MONTH INFO LIKE (MONTH, TAB NAME, BALANCE Column, ACCTNUM/LINEITEM COL)
+    Dim bdgtMap(100, 14) As Variant '//FORMAT SOURCE TAB, Budget, Month1 Balance, Month2 Balance, etc.
+    Dim myHead(5, 15) As Variant '//HEADING TO IDENTIFY IF IT IS BUDGET
+    
+    '//READ IN "Input" FOR myTab() inpt(), inptPrior(), inptBdgt() AND bdgtMap()
+    '//NOTE: TO REVISIT LATER FOR HANDLING INCOMPLETE SITUATIONS LIKE SOME CELLS LEFT BLANK
+    Worksheets("Input").Select
+    myTab(1) = Cells(38, "B")
+    myTab(2) = Cells(38, "D")
+    
+    For a = 1 To 14
+        If Cells(41, a + 1) <> Cells(41, a) And a > 1 Then
+            Exit For
+        End If
+        For b = 1 To 5
+            inpt(a, b) = Cells(b + 39, a + 1) '//READ IN "Input" FOR inpt()
+        Next b
+    Next a
+    totInpt = a - 1
+
+    d = 0
+    For c = a + 1 To 14
+        If Len(Cells(40, c)) = 0 Or Len(Cells(41, c)) = 0 Or Len(Cells(42, c)) = 0 Or Len(Cells(43, c)) = 0 Then
+            Exit For
+        End If
+        d = d + 1
+        For b = 1 To 5
+            inptPrior(d, b) = Cells(b + 39, c) '//READ IN "Input" FOR inptPrior()
+        Next b
+    Next c
+    totInptPrior = d
+    
+    c = 0
+    For a = 47 To 96
+        If Len(Cells(a, 1)) > 0 And Len(Cells(a, 2)) > 0 Then
+            c = c + 1
+            bdgtMap(c, 1) = Cells(a, 1) '//READ IN "Input" FOR bdgtMap()
+            bdgtMap(c, 2) = Cells(a, 2) '//READ IN "Input" FOR bdgtMap()
+        ElseIf Len(Cells(a, 1)) + Len(Cells(a, 2)) = 0 Then
+            Exit For
+        End If
+    Next a
+    totBdgtMap = c
+    
+    '//READ IN "Input" FOR inptBdgt()
+    c = 0
+    For a = 15 To 26
+        If Cells(42, a) = "N/A" Or Cells(43, a) = "N/A" Or Len(Cells(42, a)) = 0 Or Len(Cells(43, a)) = 0 Then
+            Exit For
+        End If
+        c = c + 1
+        inptBdgt(c, 1) = Cells(40, a)
+        inptBdgt(c, 2) = Cells(41, a)
+        inptBdgt(c, 3) = Cells(42, a)
+        inptBdgt(c, 4) = Cells(43, a)
+    Next a
+    totInptBdgt = c
+
+    '//READ IN "GL Classification Input" clss(), MEANWHILE CREATE TABLE stat()
+    Worksheets("GL Classification Input").Select
+    b = 0 '//COUNTER FOR stat()
+    For a = 1 To 1300
+        If Len(Cells(a, 1)) + Len(Cells(a, 2)) + Len(Cells(a, 3)) + Len(Cells(a, 4)) + Len(Cells(a, 5)) + Len(Cells(a, 6)) + Len(Cells(a, 7)) + Len(Cells(a, 8)) + Len(Cells(a, 9)) + Len(Cells(a, 10)) = 0 Then
+            Exit For
+        End If
+        clss(a, 1) = Cells(a, 3) '//ACCOUNT NUMBER
+        clss(a, 2) = Cells(a, 10) '//ACCOUNT CLASSIFICATION
+        clss(a, 3) = Cells(a, 1) '//ACCOUNT DESCRIPTION
+        If Len(Cells(a, 11)) > 0 Then
+            b = b + 1
+            stat(b, 1) = Cells(a, 1)
+            stat(b, 2) = Cells(a, 11)
+        End If
+    Next a
+    totClss = a - 1
+    totStat = b
+    
+    '//READ IN "CY TB CALC" FOR bal(), AND "PY TB CALC" FOR balPrior()
+    Worksheets(inpt(1, 2)).Select
+    For a = 1 To 1320
+        If Len(Cells(a, 1)) + Len(Cells(a, 3)) + Len(Cells(a, 25)) = 0 Then
+            Exit For
+        End If
+        bal(a, 1) = Cells(a, inpt(1, 4)) '//ACCOUNT NUMBER
+        For b = 1 To totInpt
+            bal(a, b + 1) = Cells(a, inpt(b, 3))
+        Next b
+
+    Next a
+    totBal = a - 1
+    Worksheets(inptPrior(1, 2)).Select
+    For a = 1 To 1320
+        If Len(Cells(a, 1)) + Len(Cells(a, 3)) + Len(Cells(a, 25)) = 0 Then
+            Exit For
+        End If
+        balPrior(a, 1) = Cells(a, inptPrior(1, 4)) '//ACCOUNT NUMBER
+        For b = 1 To totInptPrior
+            bal(a, b + 1) = Cells(a, inptPrior(b, 3))
+        Next b
+
+    Next a
+    totBalPrior = a - 1
+    
+'    MsgBox totInptBdgt
+    '//READ IN TAB "Budget" for bdgt()
+    Worksheets(inptBdgt(1, 2)).Select
+    For a = 1 To 120
+        bdgt(a, 1) = Cells(a, inptBdgt(1, 4))
+        For b = 1 To totInptBdgt
+            bdgt(a, b + 1) = "=" & inptBdgt(b, 2) & "!" & inptBdgt(b, 3) & Trim(Str(a))
+        Next b
+        
+'        If a = 15 Then
+'            MsgBox bdgt(a, 2)
+'        End If
+        If Cells(a, inptBdgt(1, 4)) = "Net result after minorities" Then
+            Exit For
+        End If
+    Next a
+    totBdgt = a
+'    MsgBox totInptBdgt
+    
+    '//MATCHMAKING bdgtMap() AND budgt() TO MAKE NEW bdgtMap()
+    For a = 1 To totBdgtMap
+        For b = 1 To totBdgt
+            If bdgtMap(a, 2) = bdgt(b, 1) Then
+                For c = 1 To totInptBdgt
+                    bdgtMap(a, c + 2) = bdgt(b, c + 1)
+                Next c
+'                bdgtMap(a, 3) = bdgt(b, 2)
+                Exit For
+            End If
+        Next b
+    Next a
+
+    '//MATCHMAKING clss(), bal() AND balPrior() TO UPDATE clss()
+    For a = 1 To totClss
+        For b = 1 To totBal
+            If clss(a, 1) = bal(b, 1) Then
+                For c = 1 To totInpt
+                    clss(a, c + 3) = "='" & inpt(c, 2) & "'!" & inpt(c, 3) & Trim(Str(b)) '//bal() IS ADDED TO clss()
+                Next c
+                For c = 1 To totInptPrior
+                    clss(a, c + 3 + totInpt) = "='" & inptPrior(c, 2) & "'!" & inptPrior(c, 3) & Trim(Str(b)) '//balPrior() IS ADDED TO clss()
+                Next c
+            End If
+        Next b
+    Next a
+    
+    '//READ IN myTab(1) TO MAKE A TABLE trnd(), ALSO CREATE AND POPULATE MAPPING TABLE myMap(), myMap(). ALSO NEEDS TO STORE FORMAT MAPPING
+     e = 0 '//counter of myMap()
+     Worksheets(myTab(1)).Select
+     '//READ IN HEADINGS FIRST
+
+        For a = 4 To 5
+            For b = 3 To 15
+                myHead(a, b) = Cells(a, b)
+            Next b
+        Next a
+
+     
+     
+     For a = 1 To 1300
+'        If Cells(a, 1) = "NET RESULTS" Then
+'            Exit For
+'        End If
+        trnd(a, 1) = Cells(a, 1) '//P&L LINE ITEMS/ACCOUNT DESCRIPTION
+        trnd(a, 2) = Cells(a, 2) '//ACCOUNT CATEGORY OR ACCOUNT NUMBER
+        trnd(a, 3) = Cells(a, 3) '//BALANCE OR FORMULA/SUBTOTAL/PERCENTAGE
+        If Len(trnd(a, 1)) > 0 And (trnd(a, 2) > 999999 Or trnd(a, 2) < 100000) Then
+            e = e + 1
+            myMap(e, 1) = a
+            myMap(e, 2) = trnd(a, 1) & trnd(a, 2)
+            myMap(e, 4) = "F" '//myMap's SECTION FOR FORMAT BETWEEN OLD AND NEW, "F" STANDS FOR FORMAT
+        End If
+        myRng = "C" & Trim(Str(a))
+        '//IF COLUMN "C" HAS FORMULA, THEN CAPTURE THE FORMULA
+        If Range(myRng).HasFormula Then
+            trnd(a, 3) = "'" & Range(myRng).Formula '//FORMULAS ARE CAPTURED
+            If Len(trnd(a, 1)) > 0 And Len(trnd(a, 2)) = 0 Then
+                frmlStr = trnd(a, 3)
+                If InStr(1, frmlStr, "sum(", 1) > 0 Then '//BREAK THE =SUM(A1:A2) FORMAT TO +A1+A2
+                    c = InStr(1, frmlStr, "sum(", 1) + 5
+                    m = Val(Mid(frmlStr, c, InStr(1, frmlStr, ":", 1) - 1))
+                    n = Mid(frmlStr, InStr(1, frmlStr, ":", 1) + 2, Len(frmlStr) - 2 - InStr(1, frmlStr, ":", 1))
+                    y = "'="
+                    For c = m To n
+                        y = y & "+" & "C" & Trim(Str(c))
+                    Next c
+                    frmlStr = y
+                ElseIf InStr(1, frmlStr, "sum(", 1) = 0 Then
+                End If
+                For c = 1 To Len(frmlStr)
+                    If Mid(frmlStr, c, 1) = "C" Then
+                        '//REPLACE "C" WITH SPACE
+                        frmlStr = Left(frmlStr, c - 1) & " " & Right(frmlStr, Len(frmlStr) - c)
+                        '//IF ELEMENT IN FORMULA, CAPTURE ROW NUMBERS IN THIS CELL AND PUT INTO myMAP()
+                        For d = c + 1 To Len(frmlStr)
+                            If Not IsNumeric(Mid(frmlStr, d, 1)) Then
+                                e = e + 1
+                                myMap(e, 1) = Val(Mid(frmlStr, c + 1, d - c - 1))
+                                myMap(e, 2) = trnd(myMap(e, 1), 1) & trnd(myMap(e, 1), 2)
+                                Exit For
+                            End If
+                            If d = Len(frmlStr) Then
+                                e = e + 1
+                                myMap(e, 1) = Val(Mid(frmlStr, c + 1, d - c))
+                                myMap(e, 2) = trnd(myMap(e, 1), 1) & trnd(myMap(e, 1), 2)
+                                Exit For
+                            End If
+                        Next d
+                    End If
+                Next c
+                trnd(a, 4) = frmlStr
+            End If
+        End If
+        If Cells(a, 1) = "NET RESULTS" Then
+            Exit For
+        End If
+     Next a
+     totTrnd = a
+     totMyMap = e
+    
+    '//MATCHMAKING trnd() AND clss(), USING map() TO RESTORE FORMULAS
+    drmHd = "="
+    c = 0 '//counter of trndNew()
+    For a = 1 To totTrnd
+        If InStr(1, trnd(a, 3), "!", 1) = 0 Then
+'        If InStr(1, trnd(a, 3), "'CY TB CALC'!", 1) = 0 Then
+            If Len(trnd(a, 2)) = 0 Then '//IF THIS P&L ROW IS A RESULT OF CALCULATION LIKE A SUBTOTAL OR PERCENTAGE
+                c = c + 1
+                For b = 1 To 3
+                    trndNew(c, b) = trnd(a, b)
+                Next b
+                
+                For e = 1 To totMyMap '//MATCH myMap TO POPULATE NEW ROW NUMBER COLUMN
+                    If myMap(e, 2) = trndNew(c, 1) & trndNew(c, 2) Then
+                        myMap(e, 3) = c
+                    End If
+                Next e
+                
+                If Len(trnd(a, 4)) > 0 Then '//IF THIS ROW HAS FORMULA, REPLACE IT WITH NEW ROW NUMBER IN trndNew()
+                    z = trnd(a, 4) '//original formula =+ 1+ 2
+                    y = "" '//result formula =+C1+C2
+                    x = "" '//incremental string when a digit is numeric
+'                    z = trndNew(c, 4)
+                    d = 1
+                    Do While d <= Len(z)
+                        If Mid(z, d, 1) = " " Then
+                            y = y + " "
+'                         If Not Mid(z, d, 1) = " " Then
+                        ElseIf Not IsNumeric(Mid(z, d, 1)) Then
+                            If Len(x) > 0 Then
+                                For e = 1 To totMyMap
+                                    If Trim(Str(myMap(e, 1))) = x Then
+                                        x = Trim(Str(myMap(e, 3)))
+                                        Exit For
+                                    End If
+                                Next e
+                                y = y + x
+                                x = ""
+                            End If
+                            y = y + Mid(z, d, 1)
+                        ElseIf IsNumeric(Mid(z, d, 1)) Then
+                            x = x + Mid(z, d, 1)
+                            If d = Len(z) And Len(x) > 0 Then
+                                For e = 1 To totMyMap
+                                    If Trim(Str(myMap(e, 1))) = x Then
+                                        x = Trim(Str(myMap(e, 3)))
+                                        Exit For
+                                    End If
+                                Next e
+                                y = y + x
+                            End If
+'                        End If
+                        End If
+                        d = d + 1
+                    Loop
+                    For b = 3 To totInpt + totInptPrior + 2
+                        w = ColNumToLetter(b)
+                        z = y
+                        x = ""
+                        d = 1
+                        Do While d <= Len(z)
+                            If Mid(z, d, 1) = " " Then
+                                x = x + w
+                            ElseIf Not Mid(z, d, 1) = " " Then
+                                x = x + Mid(z, d, 1)
+                            End If
+                            d = d + 1
+                        Loop
+                        trndNew(c, b) = Right(x, Len(x) - 1)
+                    Next b
+                        
+                End If
+                
+                If trndNew(c, 1) = "NET SALES - UNITS - HEARING AIDS incl L&H until Jan - Feb forward excl L & H" Then '//HARDCODED ROW
+                    For b = 1 To totInpt
+                        trndNew(c, b + 2) = inpt(b, 5)
+                        
+                    Next b
+                    For b = 1 To totInptPrior
+                        trndNew(c, b + 2 + totInpt) = inptPrior(b, 5)
+                    Next b
+                End If
+
+                If trndNew(c, 1) = "Dream HAID Sales" Then
+                    For b = 3 To 15
+                        w = ColNumToLetter(b)
+                        
+                        For d = 1 To Len(drmHd)
+                            If Mid(drmHd, d, 1) = " " Then
+                                drmHd = Left(drmHd, InStr(1, drmHd, " ", 1) - 1) & w & Right(drmHd, Len(drmHd) - InStr(1, drmHd, " ", 1))
+                            End If
+                        Next d
+                    Next b
+                End If
+                             
+            ElseIf Len(trnd(a, 2)) > 0 Then '//IF THIS ROW IS FROM clss() OR A CACULATION OF OTHER ROWS LIKE SUBTOTAL OR PERCENTAGE
+                startRow = 0
+                endRow = 0
+                For b = 1 To totClss
+                    If LCase(clss(b, 2)) = LCase(trnd(a, 2)) Then
+                        c = c + 1
+                        trndNew(c, 1) = clss(b, 3)
+                        trndNew(c, 2) = clss(b, 1)
+                        
+                        For d = 1 To totStat
+                            If trndNew(c, 1) = stat(d, 1) Then
+                                drmHd = drmHd & "+ " & Trim(Str(c))
+                                Exit For
+                            End If
+                        Next d
+                        
+                        For d = 3 To 15
+                            trndNew(c, d) = clss(b, d + 1)
+                        Next d
+                        clss(b, 17) = "M" '//ADD A FLAG TO clss() THAT THIS ACCOUNT BALANCE IS "MATCHED"
+                        For e = 1 To totMyMap
+                            If myMap(e, 2) = trndNew(c, 1) & trndNew(c, 2) Then
+                                myMap(e, 3) = c
+                            End If
+                        Next e
+                       
+                        If Len(trndNew(c - 1, 2)) = 0 And ((trndNew(c, 2) > 100000 And trndNew(c - 1, 2) < 999999)) Then
+                            startRow = c
+                        End If
+                        endRow = c
+                    End If
+                Next b
+                c = c + 1
+
+                trndNew(c, 1) = trnd(a, 1)
+                trndNew(c, 2) = trnd(a, 2)
+                
+                For b = 3 To totInpt + totInptPrior + 2
+                    w = ColNumToLetter(b)
+                    trndNew(c, b) = "=SUM(" & w & Trim(Str(startRow)) & ":" & w & Trim(Str(endRow)) & ")" '//SUBTOTAL ALL ACC BAL UNDER ONE CATEGORY
+              
+                Next b
+                
+                If startRow = 0 Or endRow = 0 Then
+                    For b = 3 To totInpt + totInptPrior + 2
+                        trndNew(c, b) = 0
+                    Next b
+                ElseIf startRow > 0 And endRow > 0 Then
+                    trndNew(c, 16) = startRow & ":" & endRow
+                End If
+                
+                For e = 1 To totMyMap
+                    If myMap(e, 2) = trndNew(c, 1) & trndNew(c, 2) Then
+                        myMap(e, 3) = c
+                    End If
+                Next e
+                
+            End If
+        End If
+    Next a
+    totTrndNew = c
+    
+'    '//MATCH MAKING trndNew() AND bdgt() TO MAKE UPDATED trndNew()
+'    For a = 1 To totTrndNew
+'        For b = 1 To totBdgtMap
+'            If trndNew(a, 1) = bdgt(b, 1) And Len(trndNew(a, 1)) + Len(bdgt(b, 1)) > 0 Then
+'                For c = 1 To totInptBdgt
+'                    trndNew(a, c + 16) = "=" & inptBdgt(c, 2) & "!" & inptBdgt(c, 3) & Trim(Str(b))
+'
+'                Next c
+''                trndNew(a, 17) = "=" & inptBdgt(2) & "!" & inptBdgt(3) & Trim(Str(b))
+'            End If
+'        Next b
+'    Next a
+    
+    '//MATCH MAKING trndNew() AND bdgtMap() TO MAKE UPDATED trndNew()
+    For a = 1 To totTrndNew
+        For b = 1 To totBdgtMap
+            If trndNew(a, 1) = bdgtMap(b, 1) And Len(trndNew(a, 1)) + Len(bdgtMap(b, 1)) > 0 Then
+                For c = 1 To totInptBdgt
+                    trndNew(a, c + 16) = bdgtMap(b, c + 2)
+                Next c
+'                trndNew(a, 17) = bdgtMap(b, 3)
+            End If
+        Next b
+    Next a
+    
+    
+'     '//CREATE A NEW TAB "REPORT_new1"
+'     mySheetName = "REPORT_new1"
+'     Application.DisplayAlerts = False
+'     On Error Resume Next
+'     Worksheets(mySheetName).Delete
+'     Err.Clear
+'     Application.DisplayAlerts = True
+'     Worksheets.Add.Name = mySheetName
+     
+     '//MAKE SURE HEADING ARE CORRECT
+'        For a = 4 To 5
+'            For b = 3 To 15
+'                Cells(a, b) = myHead(a, b)
+'            Next b
+'        Next a
+
+      '//MAKE SURE THE bdgt() IS CORRECT
+'      For a = 1 To totBdgt
+'          For b = 1 To totInptBdgt + 1
+'              Cells(a, b) = bdgt(a, b)
+'          Next b
+'      Next a
+
+'      MsgBox totBdgtMap
+'      '//MAKE SURE THE bdgtMap() IS CORRECT
+'      For a = 1 To totBdgtMap
+'          For b = 1 To totInptBdgt + 2
+'              Cells(a, b) = bdgtMap(a, b)
+'          Next b
+'      Next a
+'
+'     '//MAKE SURE THE MATCHED clss() IS CORRECT
+'     For a = 1 To 1277
+'         For b = 1 To 16
+'             Cells(a, b) = clss(a, b)
+'         Next b
+'     Next a
+     
+     '//MAKE SURE THE trnd() CORRECT
+'     For a = 1 To 1242
+'         For b = 1 To 4
+'             Cells(a, b) = trnd(a, b)
+'         Next b
+'     Next a
+
+'     For a = 1 To totMyMap
+'         For b = 1 To 4
+'             Cells(a, b) = myMap(a, b)
+'         Next b
+'     Next a
+
+      '//MAKE SURE inpt() inptPrior() are correct
+'      For a = 1 To totInpt
+'          For b = 1 To 5
+'              Cells(a, b) = inpt(a, b)
+'          Next b
+'      Next a
+'
+'      For a = totInpt + 1 To totInpt + totInptPrior
+'          For b = 1 To 5
+'              Cells(a + totInpt, b) = inptPrior(a, b)
+'          Next b
+'      Next a
+
+    '//MAKE SURE stat() is correct
+'    For a = 1 To totStat
+'        For b = 1 To 2
+'            Cells(a, b) = stat(a, b)
+'        Next b
+'    Next a
+     
+     '//CREATE A NEW TAB myTab(2)
+     mySheetName = myTab(2)
+     Application.DisplayAlerts = False
+     On Error Resume Next
+     Worksheets(mySheetName).Delete
+     Err.Clear
+     Application.DisplayAlerts = True
+     Worksheets.Add.Name = mySheetName
+
+'      For a = 1 To totBdgtMap
+'          For b = 1 To 3
+'              Cells(a, b) = bdgtMap(a, b)
+'          Next b
+'      Next a
+
+'
+'     '//MAKE SURE THE myMap() CORRECT
+''     For a = 1 To 300
+''         For b = 1 To 2
+''             Cells(a, b) = myMap(a, b)
+''         Next b
+''     Next a
+'
+'     //MAKE SURE THE trndNew() CORRECT
+
+     '//COPY FORMAT FROM (SOURCE TAB) TO (TARGET TAB)
+
+    If myHead(4, 5) = "$ Change" And myHead(4, 10) = "$ Change" And myHead(4, 6) = "%  Change" And myHead(4, 11) = "%  Change" Then
+'        For a = 4 To 5
+'            For b = 3 To 15
+'                Cells(a, b) = myHead(a, b)
+'            Next b
+'        Next a
+        
+         For a = 1 To totTrndNew
+             For b = 1 To 2
+'             For b = 1 To 3
+                 Cells(a, b) = trndNew(a, b)
+             Next b
+             
+             myStr = trndNew(a, 15)
+             For d = 2 To Len(myStr)
+                 If Mid(myStr, d, 1) = "O" Then
+                     myStr = Left(myStr, d - 1) & "D" & Right(myStr, Len(myStr) - d)
+                 End If
+             Next d
+             Cells(a, 4) = myStr
+             Cells(a, 8) = trndNew(a, 3)
+             Cells(a, 9) = trndNew(a, 17)
+
+'                If InStr(1, myTab(1), "Ytd", 1) > 0 Then
+'                    myStr = "="
+'                    For b = 1 To totInptBdgt
+'                        myStr = myStr & "+" & Right(trndNew(a, b + 16), Len(trndNew(a, b + 16)) - 1)
+'                    Next b
+'                    Cells(a, 9) = myStr
+'                End If
+             If InStr(1, trndNew(a, 3), ":", 1) > 0 Or InStr(1, trndNew(a, 3), "+", 1) > 0 Or InStr(1, trndNew(a, 3), "/", 1) > 0 Or trndNew(a, 1) = "Provisions for warranty" Then
+                If InStr(1, myTab(1), "Ytd", 1) > 0 Then
+                    myStr = "="
+                    For b = 1 To totInptBdgt
+                        myStr = myStr & "+" & Right(trndNew(a, b + 16), Len(trndNew(a, b + 16)) - 1)
+                    Next b
+                    If myStr = "=" Then
+                        myStr = 0
+                    End If
+                    Cells(a, 9) = myStr
+                    If trndNew(a, 1) = "GROSS MARGIN %" Then
+                        Cells(a, 9) = trndNew(a, 17)
+                    End If
+                End If
+                Cells(a, 5) = "=C" & Trim(Str(a)) & "-D" & Trim(Str(a))
+                Cells(a, 6) = "=E" & Trim(Str(a)) & "/D" & Trim(Str(a))
+                Cells(a, 10) = "=H" & Trim(Str(a)) & "-I" & Trim(Str(a))
+                Cells(a, 11) = "=J" & Trim(Str(a)) & "/I" & Trim(Str(a))
+             End If
+             If Len(trndNew(a, 16)) > 0 And InStr(1, trndNew(a, 16), ":", 1) > 0 Then
+                Rows(trndNew(a, 16)).Group
+                 'Hide groups
+                ActiveSheet.Outline.ShowLevels RowLevels:=1
+                 'Show groups
+    '            ActiveSheet.Outline.ShowLevels RowLevels:=2
+             End If
+             For b = 1 To totInptBdgt
+                 Cells(a, b + 16) = trndNew(a, b + 16)
+             Next b
+    
+    '         Cells(a, 17) = trndNew(a, 17)
+         Next a
+        
+        For a = 4 To 5
+            For b = 3 To 15
+                Cells(a, b) = myHead(a, b)
+            Next b
+        Next a
+        
+        srcRng = "A4:M5"
+        trgtRng = "A4:M5"
+        Sheets(myTab(1)).Range(srcRng).Copy
+        Sheets(myTab(2)).Range(trgtRng).PasteSpecial xlPasteFormats
+        
+         '//LIST THE UNMATCHED P&L ACCOUNT IN clss() AT THE BOTTOM
+         b = 0
+         For a = 1 To totClss
+    
+             If clss(a, 17) = "" And clss(a, 1) > 499999 And clss(a, 1) < 1000000 Then
+                 b = b + 1
+                 Cells(totTrndNew + b, 1) = clss(a, 3)
+                 Cells(totTrndNew + b, 2) = clss(a, 2) & " (" & clss(a, 1) & ")"
+'                 For c = 3 To totInpt + totInptPrior + 2
+                     Cells(totTrndNew + b, "C") = clss(a, 4)
+                     Cells(totTrndNew + b, "D") = clss(a, 16)
+                     Cells(totTrndNew + b, "H") = clss(a, 4)
+'                 Next c
+             End If
+         Next a
+    
+    ElseIf myHead(4, 5) <> "$ Change" And myHead(4, 10) <> "$ Change" And myHead(4, 6) <> "%  Change" And myHead(4, 11) <> "%  Change" Then
+         For a = 1 To totTrndNew
+             For b = 1 To 15
+'             For b = 1 To 3
+                 Cells(a, b) = trndNew(a, b)
+             Next b
+    
+             If Len(trndNew(a, 16)) > 0 And InStr(1, trndNew(a, 16), ":", 1) > 0 Then
+                Rows(trndNew(a, 16)).Group
+                 'Hide groups
+                ActiveSheet.Outline.ShowLevels RowLevels:=1
+                 'Show groups
+    '            ActiveSheet.Outline.ShowLevels RowLevels:=2
+             End If
+             
+             '//DISPLAY MONTHLY BUDGET NUMBERS
+'             For b = 1 To totInptBdgt
+'                 Cells(a, b + 16) = trndNew(a, b + 16)
+'             Next b
+    
+    '         Cells(a, 17) = trndNew(a, 17)
+         Next a
+    
+         '//MONTHS ARE ADDED ON THE TOP
+         For a = 1 To totInpt
+             Cells(5, a + 2) = inpt(a, 1)
+         Next a
+    
+         For a = 1 To totInptPrior
+             Cells(5, a + 2 + totInpt) = inptPrior(a, 1)
+         Next a
+         
+
+         
+         '//LIST THE UNMATCHED P&L ACCOUNT IN clss() AT THE BOTTOM
+         b = 0
+         For a = 1 To totClss
+    
+             If clss(a, 17) = "" And clss(a, 1) > 499999 And clss(a, 1) < 1000000 Then
+                 b = b + 1
+                 Cells(totTrndNew + b, 1) = clss(a, 3)
+                 Cells(totTrndNew + b, 2) = clss(a, 2) & " (" & clss(a, 1) & ")"
+                 For c = 3 To totInpt + totInptPrior + 2
+                     Cells(totTrndNew + b, c) = clss(a, c + 1)
+                 Next c
+             End If
+         Next a
+    End If
+         '//COPY FORMAT FROM (SOURCE TAB) TO (TARGET TAB)
+        For a = 1 To totMyMap
+            If myMap(a, 4) = "F" Then
+                b = myMap(a, 1)
+                c = myMap(a, 3)
+                srcRng = "A" & Trim(Str(b)) & ":O" & Trim(Str(b))
+                trgtRng = "A" & Trim(Str(c)) & ":O" & Trim(Str(c))
+                Sheets(myTab(1)).Range(srcRng).Copy
+                Sheets(myTab(2)).Range(trgtRng).PasteSpecial xlPasteFormats
+            End If
+        Next a
+    
+
+End Sub
+
+Function ColNumToLetter(a) As String
+    If a > 702 Then
+        ' triple letter columns
+        ColNumToLetter = _
+        Chr((Int((a - 1 - 26 - 676) / 676)) Mod 676 + 65) & _
+        Chr((Int((a - 1 - 26) / 26) Mod 26) + 65) & _
+        Chr(((a - 1) Mod 26) + 65)
+    ElseIf a > 26 Then
+        ' double letter columns
+        ColNumToLetter = Chr(Int((a - 1) / 26) + 64) & _
+                Chr(((a - 1) Mod 26) + 65)
+    Else
+        ' single letter columns
+        ColNumToLetter = Chr(a + 64)
+    End If
+End Function
+
+
+
+
+
