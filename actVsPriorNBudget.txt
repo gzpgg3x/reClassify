@@ -1,9 +1,6 @@
 Sub actVsPriorNBudget()
 
-    '//GOAL: ONE CLICK TO GENERATE 4 REPORTS,
-    '//TREND REPORT ADD ONE MORE DIMENSION FOR MTD/YTD
-    '//BUDGET ONE PROCEDURE BUT POPULATE THE DIFFERENT TABS FOR MTD/YTD
-    '//STRING MANIPUALATION TO USE FUNCTIONS IF POSSILBE
+    '//TASK: THE BUDGET COLUMN NEEDS TO MAINTAIN ORIGINAL CALCULATION; UNUSED (MATHECHED) BUDGET ITEMS NEED TO LIST AT THE BOTTOM
     
     Reset
    
@@ -22,7 +19,7 @@ Sub actVsPriorNBudget()
     Dim trnd(1300, 4) As Variant '//P&L LINE ITEMS/ACCOUNT DESCRIPTION'//ACCOUNT CATEGORY OR ACCOUNT NUMBER'//BALANCE OR FORMULA/SUBTOTAL/PERCENTAGE'//frmlStr
     Dim trndNew(1320, 5) As Variant '//P&L LINE ITEMS/ACCOUNT DESCRIPTION'//ACCOUNT CATEGORY OR ACCOUNT NUMBER'//BALANCE OR FORMULA/SUBTOTAL/PERCENTAGE'//frmlStr'//startRow & ":" & endRow
     Dim inptBdgt(12, 4) As Variant '//BUDGET MONTH INFO LIKE (MONTH, TAB NAME, BALANCE Column, ACCTNUM/LINEITEM COL)
-    Dim bdgtMap(100, 3) As Variant '//FORMAT SOURCE TAB, Budget, ROW OF BALANCE IN THE BUDGET TAB
+    Dim bdgtMap(100, 4) As Variant '//FORMAT SOURCE TAB, Budget, ROW OF BALANCE IN THE BUDGET TAB, "M" TO INDICATE IF IT IS IN MATCHMAKING
     Dim bdgt(120) As Variant '//LINE ITEM
     Dim myHead(5, 15) As Variant '//HEADING TO IDENTIFY IF IT IS BUDGET
 '
@@ -130,12 +127,20 @@ Sub actVsPriorNBudget()
 
     '//READ IN TAB "Budget" for bdgt()
     Worksheets(inptBdgt(1, 2)).Select
+    f = 0
     For a = 1 To 120
         bdgt(a) = Cells(a, inptBdgt(1, 4))
-'        bdgt(a, 2) = a
-'        For b = 1 To totInptBdgt
-'            bdgt(a, b + 1) = "=" & inptBdgt(b, 2) & "!" & inptBdgt(b, 3) & Trim(Str(a))
-'        Next b
+
+        If InStr(1, bdgt(a), "Salar", 1) > 0 And InStr(1, bdgt(a), "Wage", 1) > 0 And InStr(1, bdgt(a), "Pension", 1) > 0 Then
+            f = f + 1
+            If f = 1 Then
+                bdgt(a) = Trim(bdgt(a)) & " "
+            ElseIf f = 2 Then
+                bdgt(a) = Trim(bdgt(a)) & "  "
+            ElseIf f = 3 Then
+                bdgt(a) = Trim(bdgt(a)) & "   "
+            End If
+        End If
         
         If Cells(a, inptBdgt(1, 4)) = "Net result after minorities" Then
             Exit For
@@ -428,23 +433,20 @@ Sub actVsPriorNBudget()
         For b = 1 To totBdgtMap
             If trndNew(a, 1) = bdgtMap(b, 1) And Len(trndNew(a, 1)) + Len(bdgtMap(b, 1)) > 0 Then
                 trndNew(a, 4) = bdgtMap(b, 3)
-'                For c = 1 To totInptBdgt
-'                    trndNew(a, c + 16) = bdgtMap(b, c + 2)
-'                Next c
-'                trndNew(a, 17) = bdgtMap(b, 3)
+                bdgtMap(b, 4) = "M" '//"M" FOR MATCHED IN MATCHMAKING
             End If
         Next b
     Next a
 '
 '
 '     '//CREATE A NEW TAB "REPORT_new1"
-'     mySheetName = "REPORT_new1"
-'     Application.DisplayAlerts = False
-'     On Error Resume Next
-'     Worksheets(mySheetName).Delete
-'     Err.Clear
-'     Application.DisplayAlerts = True
-'     Worksheets.Add.Name = mySheetName
+     mySheetName = "REPORT_new1"
+     Application.DisplayAlerts = False
+     On Error Resume Next
+     Worksheets(mySheetName).Delete
+     Err.Clear
+     Application.DisplayAlerts = True
+     Worksheets.Add.Name = mySheetName
 '
 '     '//MAKE SURE HEADING ARE CORRECT
 ''        For a = 4 To 5
@@ -460,13 +462,13 @@ Sub actVsPriorNBudget()
 ''          Next b
 '      Next a
 '
-''      MsgBox totBdgtMap
+
 '      '//MAKE SURE THE bdgtMap() IS CORRECT
-'      For a = 1 To totBdgtMap
-'          For b = 1 To 3
-'              Cells(a, b) = bdgtMap(a, b)
-'          Next b
-'      Next a
+      For a = 1 To totBdgtMap
+          For b = 1 To 4
+              Cells(a, b) = bdgtMap(a, b)
+          Next b
+      Next a
 ''
       '//MAKE SURE THE inptBdgt() IS CORRECT
 '      For a = 1 To totInptBdgt
@@ -662,6 +664,18 @@ Sub actVsPriorNBudget()
 '                 End If
             Next a
             
+             '//LIST THE UNMATCHED bdgtMap() AT THE BOTTOM
+             b = 0 '//COUNTER FOR THE UNMATCHED bdgtMap()
+             For a = 1 To totBdgtMap
+                 If bdgtMap(a, 4) <> "M" Then
+                     b = b + 1
+                     Cells(totTrndNew + b, "I") = bdgtMap(a, 4)
+                     Cells(totTrndNew + b, "L") = bdgtMap(a, 2)
+                 End If
+             Next a
+             
+
+            
             For c = 4 To 5
                 For b = 3 To 15
                     Cells(c, b) = myHead(c, b)
@@ -678,6 +692,26 @@ Sub actVsPriorNBudget()
                 Cells(5, 10) = "Act vs. YTD Budget"
                 Cells(5, 11) = "Act vs. YTD Budget"
             End If
+            
+             '//MAKE SURE BUDGET COLUMNS' FORMULA ARE CONSISTENT WITH THE CURRENT PERIODS'
+             For a = 1 To totTrndNew
+                 If Len(trndNew(a, 3)) > 0 And InStr(1, trndNew(a, 3), "=", 1) > 0 And InStr(1, trndNew(a, 3), "Sum(", 1) = 0 And InStr(1, trndNew(a, 3), "!", 1) = 0 Then
+'                     If a = 1266 Then
+'                         MsgBox Cells(a, 1)
+'                     End If
+                     myStr = trndNew(a, 3)
+                     For b = 2 To Len(myStr)
+                         If Mid(myStr, b, 1) = " " Then
+                             myStr = Left(myStr, b - 1) & "I" & Right(myStr, Len(myStr) - b)
+'                             If a = 1266 Then
+'                                 MsgBox b & "    " & myStr
+'                             End If
+                         End If
+                     Next b
+                     Cells(a, 9) = Right(myStr, Len(myStr) - 1)
+                 End If
+ 
+             Next a
             
             Cells(3, 1) = "For the Month Ending " & inpt(f, 1, 1)
             
@@ -739,8 +773,18 @@ Sub actVsPriorNBudget()
                  Cells(5, a + 2) = inpt(f, a, 1)
              Next a
 
-             '//LIST THE UNMATCHED P&L ACCOUNT IN clss() AT THE BOTTOM
+'             '//LIST THE UNMATCHED bdgtMap() AT THE BOTTOM
+'             b = 0 '//COUNTER FOR THE UNMATCHED bdgtMap()
+'             For a = 1 To totBdgtMap
+'                 If bdgtMap(a, 4) <> "M" Then
+'                     b = b + 1
+'                     Cells(totTrndNew + b, "L") = bdgtMap(a, 4)
+'                     Cells(totTrndNew + b, "J") = bdgtMap(a, 2)
+'                 End If
+'             Next a
         End If
+        
+        
 
         '//COPY FORMAT FROM (SOURCE TAB) TO (TARGET TAB)
         For a = 1 To totMyMap
