@@ -171,9 +171,12 @@ Sub trend()
     Next a
 '
     '//READ IN myTab(1) TO MAKE A TABLE trnd(), ALSO CREATE AND POPULATE MAPPING TABLE myMap(), myMap(). ALSO NEEDS TO STORE FORMAT MAPPING
-     e = 0 '//counter of myMap()
+     e = 0 '//COUNT OF myMap()
+     f = 0 '//COUNT OF THE IDENTICAL LINE ITME: Salaries/Wages/Pensions etc
      Worksheets(myTab(1)).Select
      '//READ IN HEADINGS FIRST
+        
+     
         For a = 4 To 5
             For b = 3 To 15
                 myHead(a, b) = Cells(a, b)
@@ -184,6 +187,30 @@ Sub trend()
         trnd(a, 1) = Cells(a, 1) '//P&L LINE ITEMS/ACCOUNT DESCRIPTION
         trnd(a, 2) = Cells(a, 2) '//ACCOUNT CATEGORY OR ACCOUNT NUMBER
         trnd(a, 3) = Cells(a, 3) '//BALANCE OR FORMULA/SUBTOTAL/PERCENTAGE
+        
+        If InStr(1, trnd(a, 1), "Salar", 1) > 0 And InStr(1, trnd(a, 1), "Wage", 1) > 0 And InStr(1, trnd(a, 1), "Pension", 1) > 0 Then
+            f = f + 1
+            If f = 1 Then
+                trnd(a, 1) = Trim(trnd(a, 1)) & " "
+            ElseIf f = 2 Then
+                trnd(a, 1) = Trim(trnd(a, 1)) & "  "
+            ElseIf f = 3 Then
+                trnd(a, 1) = Trim(trnd(a, 1)) & "   "
+            End If
+        End If
+        
+        If InStr(1, trnd(a, 2), "%", 1) > 0 Then
+            trnd(a, 1) = trnd(a - 1, 1) & " " & trnd(a, 2)
+            trnd(a, 2) = ""
+'            e = e + 1
+'            myMap(e, 1) = a
+'            myMap(e, 2) = trnd(a, 1) & trnd(a, 2)
+'            myMap(e, 4) = "F" '//myMap's SECTION FOR FORMAT BETWEEN OLD AND NEW, "F" STANDS FOR FORMAT
+''            If a = 988 Then
+''                MsgBox
+''            End If
+        End If
+        
         If Len(trnd(a, 1)) > 0 And (trnd(a, 2) > 999999 Or trnd(a, 2) < 100000) Then
             e = e + 1
             myMap(e, 1) = a
@@ -235,6 +262,7 @@ Sub trend()
             Exit For
         End If
      Next a
+     trnd(5, 1) = " "
      totTrnd = a
      totMyMap = e
 '
@@ -292,7 +320,7 @@ Sub trend()
                     trndNew(c, 3) = y
                 End If
 
-            ElseIf Len(trnd(a, 2)) > 0 Then '//IF THIS ROW IS FROM clss() OR A CACULATION OF OTHER ROWS LIKE SUBTOTAL OR PERCENTAGE
+            ElseIf Len(trnd(a, 2)) > 0 Or InStr(1, trnd(a - 1, 1), "%", 1) > 0 Then '//IF THIS ROW IS FROM clss() OR A CACULATION OF OTHER ROWS LIKE SUBTOTAL OR PERCENTAGE
                 startRow = 0
                 endRow = 0
                 For b = 1 To totClss
@@ -317,11 +345,19 @@ Sub trend()
                                 myMap(e, 3) = c
                             End If
                         Next e
+                        
+'                            If c = 1214 Then
+'                                MsgBox trndNew(a, 1)
+'                            End If
 
-                        If Len(trndNew(c - 1, 2)) = 0 And ((trndNew(c, 2) > 100000 And trndNew(c - 1, 2) < 999999)) Then
+                        If Len(trndNew(c - 1, 2)) = 0 And ((trndNew(c, 2) > 100000 And trndNew(c, 2) < 999999)) Then
+'                            If c = 1214 Then
+'                                MsgBox trndNew(a, 1)
+'                            End If
                             startRow = c
                         End If
                         endRow = c
+'                        trndNew(c, 5) = Trim(Str(startRow)) & " | " & Trim(Str(endRow))
                     End If
                 Next b
                 c = c + 1
@@ -334,13 +370,19 @@ Sub trend()
                     trndNew(c, b) = "'=SUM(" & " " & Trim(Str(startRow)) & ":" & " " & Trim(Str(endRow)) & ")" '//SUBTOTAL ALL ACC BAL UNDER ONE CATEGORY
                     
                 Next b
-
+'                If c = 1040 Then
+'                    MsgBox startRow
+'                    MsgBox endRow
+'                End If
                 If startRow = 0 Or endRow = 0 Then
                     For b = 3 To 3 '//totInpt + totInptPrior + 2
                         trndNew(c, b) = 0
                     Next b
+'                    trndNew(c, 5) = Trim(Str(startRow)) & " | " & Trim(Str(endRow))
+'                    trndNew(c, 5) = Trim(Str(startRow)) & " | " & Trim(Str(endRow))
                 ElseIf startRow > 0 And endRow > 0 Then
-                    trndNew(c, 5) = startRow & ":" & endRow
+                    trndNew(c, 5) = Trim(Str(startRow)) & ":" & Trim(Str(endRow))
+'                    trndNew(c, 5) = Trim(Str(startRow)) & " | " & Trim(Str(endRow))
                 End If
 
                 For e = 1 To totMyMap
@@ -437,11 +479,12 @@ Sub trend()
 '         Next b
 '     Next a
 '
-''     For a = 1 To totMyMap
-''         For b = 1 To 4
-''             Cells(a, b) = myMap(a, b)
-''         Next b
-''     Next a
+     '//MAKE SURE myMap CORRECT
+'     For a = 1 To totMyMap
+'         For b = 1 To 4
+'             Cells(a, b) = myMap(a, b)
+'         Next b
+'     Next a
 '
 '      '//MAKE SURE inpt() inptPrior() are correct
 ''      For a = 1 To totInpt
@@ -474,7 +517,11 @@ Sub trend()
 '
      '//CREATE NEW TABS
      For f = 1 To 2
-         tabStr = myTab(1) & Trim(Str(f))
+         If f = 1 Then
+             tabStr = "Trend Report MTD"
+         ElseIf f = 2 Then
+             tabStr = "Trend Report YTD"
+         End If
          mySheetName = tabStr
          Application.DisplayAlerts = False
          On Error Resume Next
@@ -637,6 +684,7 @@ Sub trend()
     '             Next b
     
         '         Cells(a, 17) = trndNew(a, 17)
+'                 Cells(a, 16) = trndNew(a, 5)
              Next a
     
              '//MONTHS ARE ADDED ON THE TOP
@@ -660,6 +708,9 @@ Sub trend()
                 Sheets(tabStr).Range(trgtRng).PasteSpecial xlPasteFormats
             End If
         Next a
+        
+        Sheets(tabStr).Range("N:N").Copy
+        Sheets(tabStr).Range("O:O").PasteSpecial xlPasteFormats
     Next f
 End Sub
 Function ColNumToLetter(a) As String
@@ -678,4 +729,10 @@ Function ColNumToLetter(a) As String
         ColNumToLetter = Chr(a + 64)
     End If
 End Function
+
+
+
+
+
+
 
