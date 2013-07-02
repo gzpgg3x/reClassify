@@ -1,6 +1,6 @@
-Sub balSh_backup()
+Sub balance_sheet_1()
 
-    '//STATUS: SO FAR trnd() APPEARS CORRECT
+    '//STATUS: version 07022013 5:03 pm
     
     Reset
    
@@ -165,7 +165,7 @@ Sub balSh_backup()
 '    MsgBox totTrnd
 
      For a = 1 To totTrnd '//CREATE AND POPULATE MAPPING TABLE myMap(). ALSO NEEDS TO STORE FORMAT MAPPING
-         If Len(trnd(a, 1)) > 0 And Len(trnd(a, 3)) > 0 And (trnd(a, 2) > 1000000 Or trnd(a, 2) < 100000) Then
+         If Len(trnd(a, 1)) > 0 And Len(trnd(a, 3)) > 0 And (trnd(a, 2) > 1000000 Or trnd(a, 2) < 100000) And InStr(1, trnd(a, 3), "widex", 1) = 0 And InStr(1, trnd(a, 3), "current", 1) = 0 Then
 
                 frmlStr = trnd(a, 3)
 
@@ -187,6 +187,9 @@ Sub balSh_backup()
                                     e = e + 1
                                     myMap(e, 1) = Val(Mid(frmlStr, c + 1, d - c - 1))
                                     myMap(e, 2) = trnd(myMap(e, 1), 1) & trnd(myMap(e, 1), 2)
+'                                    If e = 242 Then
+'                                        MsgBox myMap(e, 1) & "  " & a
+'                                    End If
 '                                End If
                                 Exit For
                             End If
@@ -195,6 +198,9 @@ Sub balSh_backup()
                                     e = e + 1
                                     myMap(e, 1) = Val(Mid(frmlStr, c + 1, d - c))
                                     myMap(e, 2) = trnd(myMap(e, 1), 1) & trnd(myMap(e, 1), 2)
+'                                    If e = 188 Then
+'                                        MsgBox myMap(e, 1)
+'                                    End If
 '                                end if
                                 Exit For
                             End If
@@ -223,13 +229,83 @@ Sub balSh_backup()
                 If InStr(1, z, "sum", 1) > 0 Then '//IF trnd(a,3) HAS "SUM(" or "SUMIF(" THEN REPLACE THIS PART WITH ""
                     z = Left(z, InStr(1, z, "sum", 1) - 1) & "|||" & Right(z, Len(z) - InStr(InStr(1, z, "sum", 1), z, ")", 1))
                 End If
+                
+                startRow = 0
+                endRow = 0
+                For b = 1 To totClss
+                     If LCase(clss(b, 2)) = LCase(trnd(a, 2)) Then
+                        clss(b, 6) = "M" '//LABLE "M" STANDS FOR THIS LINE OF clss IN USE IN BALANCE SHEET AS MATCHED
+                        c = c + 1
+                        trndNew(c, 1) = clss(b, 3)
+                        trndNew(c, 2) = clss(b, 1)
+                        trndNew(c, 3) = clss(b, 4)
+                        If Len(trndNew(c - 1, 3)) = 0 Or trndNew(c - 1, 3) = 0 Then
+'                            clss(b, 6) = "M" '//LABLE "M" STANDS FOR THIS LINE OF clss IN USE IN BALANCE SHEET AS MATCHED
+                            startRow = c
+                            endRow = c
+                        ElseIf IsNumeric(trndNew(c - 1, 3)) Then
+'                            startRow = c
+                            endRow = c
+                        ElseIf Not IsNumeric(trndNew(c - 1, 3)) Then
+                            startRow = c
+                            endRow = c
+                        End If
+'                        trndNew(c, 4) = "(" & startRow & ":" & endRow
+                        If Len(startRow) + Len(startRow) = 0 Then
+                            trndNew(c, 3) = 0
+                        End If
+                    End If
+'                    If b = totClss And startRow + endRow = 0 Then
+'
+'                    End If
+                Next b
+                
+                '//REPLACE FORMULA "|||" WITH THE REAL "Sum(startRow:endRow)"
                 c = c + 1
                 trndNew(c, 1) = trnd(a, 1)
                 trndNew(c, 2) = trnd(a, 2)
+                trndNew(c, 4) = startRow & ":" & endRow
+                trndNew(c, 3) = trnd(a, 3)
+
+                If InStr(1, z, "|||", 1) > 0 Then
+                    z = Left(z, InStr(1, z, "|||", 1) - 1) & "SUM( " & startRow & ": " & endRow & ")" & Right(z, Len(z) - InStr(1, z, "|||", 1) - 2)
+                End If
+                
                 trndNew(c, 3) = z
-        
+                If Len(startRow) + Len(startRow) = 0 Then
+                    trndNew(c, 3) = 0
+                End If
             End If
         End If
+    Next a
+    totTrndNew = c
+
+    '//ADD THE UNMATCHED P&L ACCOUNT IN clss() AT THE BOTTOM
+    For a = 1 To totClss
+
+        If clss(a, 6) = "" And clss(a, 1) < 500000 And clss(a, 1) > 100000 Then
+            c = c + 1
+            trndNew(c, 1) = clss(a, 3)
+            trndNew(c, 2) = clss(a, 2) & " (" & clss(a, 1) & ")"
+            trndNew(c, 3) = clss(a, 4)
+        End If
+    Next a
+
+    totTrndNewPlusUnm = c
+    
+    '//MAKE SURE IF startRow AND endRowARE 0, THE SUM()'S VALUE IS 0, myMap()'S NEW ROWS ARE ADDED
+    For a = 1 To totTrndNew
+        If InStr(1, trndNew(a, 3), "Sum(", 1) > 0 And trndNew(a, 4) = "0:0" Then '//MAKE SURE IF startRow AND endRowARE 0, THE SUM()'S VALUE IS 0
+            trndNew(a, 3) = 0
+        End If
+        For b = 1 To totMyMap
+            If trndNew(a, 1) & trndNew(a, 2) = myMap(b, 2) Then
+
+                myMap(b, 3) = a
+
+            End If
+        Next b
+    Next a
 
 ''            If c = 91 Then
 ''                MsgBox trndNew(c, 3)
@@ -306,162 +382,162 @@ Sub balSh_backup()
 '                End If
 '            End If
 '        End If
-    Next a
-    totTrndNew = c
+'    Next a
+'    totTrndNew = c
+'
+'    '//ADD THE UNMATCHED P&L ACCOUNT IN clss() AT THE BOTTOM
+'    For a = 1 To totClss
+'
+'        If clss(a, 6) = "" And clss(a, 1) < 500000 And clss(a, 1) > 100000 Then
+'            c = c + 1
+'            trndNew(c, 1) = clss(a, 3)
+'            trndNew(c, 2) = clss(a, 2) & " (" & clss(a, 1) & ")"
+'            trndNew(c, 3) = clss(a, 4)
+'        End If
+'    Next a
+'
+'    totTrndNewPlusUnm = c
 
-    '//ADD THE UNMATCHED P&L ACCOUNT IN clss() AT THE BOTTOM
-    For a = 1 To totClss
+'    '//MAKE SURE IF startRow AND endRowARE 0, THE SUM()'S VALUE IS 0, myMap()'S NEW ROWS ARE ADDED
+'    For a = 1 To totTrndNew
+'        If InStr(1, trndNew(a, 3), "Sum(", 1) > 0 And trndNew(a, 4) = "0:0" Then '//MAKE SURE IF startRow AND endRowARE 0, THE SUM()'S VALUE IS 0
+'            trndNew(a, 3) = 0
+'        End If
+'        For b = 1 To totMyMap
+'            If trndNew(a, 1) & trndNew(a, 2) = myMap(b, 2) Then
+'
+'                myMap(b, 3) = a
+'
+'            End If
+'        Next b
+'    Next a
 
-        If clss(a, 6) = "" And clss(a, 1) < 500000 And clss(a, 1) > 100000 Then
-            c = c + 1
-            trndNew(c, 1) = clss(a, 3)
-            trndNew(c, 2) = clss(a, 2) & " (" & clss(a, 1) & ")"
-            trndNew(c, 3) = clss(a, 4)
-        End If
-    Next a
-
-    totTrndNewPlusUnm = c
-
-    '//MAKE SURE IF startRow AND endRowARE 0, THE SUM()'S VALUE IS 0, myMap()'S NEW ROWS ARE ADDED
+'    //REPLACE OLD ROW NUMBERS WITH NEW ROW NUMBERS
     For a = 1 To totTrndNew
-        If InStr(1, trndNew(a, 3), "Sum(", 1) > 0 And trndNew(a, 4) = "0:0" Then '//MAKE SURE IF startRow AND endRowARE 0, THE SUM()'S VALUE IS 0
-            trndNew(a, 3) = 0
-        End If
-        For b = 1 To totMyMap
-            If trndNew(a, 1) & trndNew(a, 2) = myMap(b, 2) Then
-
-                myMap(b, 3) = a
-
+        If ((Not IsNumeric(trndNew(a, 1))) And (Not IsNumeric(trndNew(a, 2))) And Len(trndNew(a, 3)) > 0 And trndNew(a, 3) <> 0 And InStr(1, trndNew(a, 3), "!", 1) = 0) Then
+'            If a = 11 Then
+'                MsgBox a
+'            End If
+            trndNew(a, 5) = trndNew(a, 3)
+            z = "'" & trndNew(a, 3) '//original formula =+ 1+ 2
+            If Left(z, 2) = "''" Then
+                z = Right(z, Len(z) - 1)
             End If
-        Next b
+'            If a = 13 Then
+'                MsgBox z
+'                MsgBox trndNew(a, 1)
+'            End If
+            If InStr(1, z, "Sum(", 1) = 0 Or (InStr(1, z, "Sum(", 1) > 0 And InStr(InStr(1, z, "Sum(", 1), z, ")", 1) < Len(z)) Then
+                If InStr(1, z, "Sum(", 1) = 0 Then
+                    d = 1
+                    y = "" '//result formula =+C1+C2
+                ElseIf InStr(InStr(1, z, "Sum(", 1), z, ")", 1) < Len(z) Then
+                    d = InStr(InStr(1, z, "Sum(", 1), z, ")", 1) + 1
+                    y = Left(z, InStr(InStr(1, z, "Sum(", 1), z, ")", 1)) '//result formula =+C1+C2
+                End If
+'                y = "" '//result formula =+C1+C2
+                x = "" '//incremental string when a digit is numeric
+'                d = 1
+                Do While d <= Len(z)
+                    If Mid(z, d, 1) = " " Then
+                        y = y + " "
+                    ElseIf Not IsNumeric(Mid(z, d, 1)) Then
+                        If Len(x) > 0 Then
+                            For e = 1 To totMyMap
+                                If Trim(Str(myMap(e, 1))) = x Then
+                                    x = Trim(Str(myMap(e, 3)))
+                                    Exit For
+                                End If
+                            Next e
+                            y = y + x
+                            x = ""
+                        End If
+                        y = y + Mid(z, d, 1)
+                    ElseIf IsNumeric(Mid(z, d, 1)) Then
+                        x = x + Mid(z, d, 1)
+                        If d = Len(z) And Len(x) > 0 Then
+                            For e = 1 To totMyMap
+                                If Trim(Str(myMap(e, 1))) = x Then
+                                    x = Trim(Str(myMap(e, 3)))
+                                    Exit For
+                                End If
+                            Next e
+                            y = y + x
+                        End If
+                    End If
+                    d = d + 1
+                Loop
+                trndNew(a, 5) = y
+            End If
+        End If
     Next a
 
-    '//REPLACE OLD ROW NUMBERS WITH NEW ROW NUMBERS
-'    For a = 1 To totTrndNew
-'        If ((Not IsNumeric(trndNew(a, 1))) And (Not IsNumeric(trndNew(a, 2))) And Len(trndNew(a, 3)) > 0 And trndNew(a, 3) <> 0 And InStr(1, trndNew(a, 3), "!", 1) = 0) Then
-''            If a = 11 Then
-''                MsgBox a
-''            End If
-'            trndNew(a, 5) = trndNew(a, 3)
-'            z = "'" & trndNew(a, 3) '//original formula =+ 1+ 2
-'            If Left(z, 2) = "''" Then
-'                z = Right(z, Len(z) - 1)
+    For a = 1 To totTrndNew
+        If InStr(1, trndNew(a, 1), "2013-2014 Goodwill ifer - 1 month", 1) > 0 Or trndNew(a, 1) = "Retained earnings this year" Or ((Not IsNumeric(trndNew(a, 1))) And Len(trndNew(a, 2)) = 0 And InStr(1, trndNew(a, 3), "=", 1)) Then
+            If a = 11 Then
+                MsgBox a '//trndNew(a, 3)
+            End If
+            trndNew(a, 5) = trndNew(a, 3)
+            z = trndNew(a, 3) '//original formula =+ 1+ 2
+                y = "" '//result formula =+C1+C2
+                x = "" '//incremental string when a digit is numeric
+                d = 1
+                If InStr(1, z, "'!", 1) > 0 Then
+                    d = InStr(InStr(1, z, "'!", 1), z, "+", 1)
+                    y = Left(z, d - 1)
+                End If
+                Do While d <= Len(z)
+                    If Mid(z, d, 1) = " " Then
+                        y = y + " "
+                    ElseIf Not IsNumeric(Mid(z, d, 1)) Then
+                        If Len(x) > 0 Then
+                            For e = 1 To totMyMap
+                                If Trim(Str(myMap(e, 1))) = x Then
+                                    x = Trim(Str(myMap(e, 3)))
+                                    Exit For
+                                End If
+                            Next e
+                            If Len(myMap(e, 2)) = 0 Then
+                                y = Left(y, Len(y) - 2)
+                                x = ""
+                            End If
+                            y = y & x
+                            x = ""
+                        End If
+                        y = y + Mid(z, d, 1)
+                        If Mid(z, d, 1) = "/" Then
+                            Exit Do
+                        End If
+
+                    ElseIf IsNumeric(Mid(z, d, 1)) Then
+                        x = x + Mid(z, d, 1)
+                        If d = Len(z) And Len(x) > 0 Then
+                            For e = 1 To totMyMap
+                                If Trim(Str(myMap(e, 1))) = x Then
+                                    x = Trim(Str(myMap(e, 3)))
+                                    Exit For
+                                End If
+                            Next e
+                            If Len(myMap(e, 2)) = 0 Then
+                                y = Left(y, Len(y) - 2)
+                                x = ""
+                            End If
+                            y = y & x
+                        End If
+                    End If
+                    d = d + 1
+                Loop
+                If Mid(z, d, 1) = "/" Then
+                    y = y & Right(z, Len(z) - d)
+'                ElseIf d > Len(z) Then
+                End If
+                trndNew(a, 5) = y
 '            End If
-''            If a = 13 Then
-''                MsgBox z
-''                MsgBox trndNew(a, 1)
-''            End If
-'            If InStr(1, z, "Sum(", 1) = 0 Or (InStr(1, z, "Sum(", 1) > 0 And InStr(InStr(1, z, "Sum(", 1), z, ")", 1) < Len(z)) Then
-'                If InStr(1, z, "Sum(", 1) = 0 Then
-'                    d = 1
-'                    y = "" '//result formula =+C1+C2
-'                ElseIf InStr(InStr(1, z, "Sum(", 1), z, ")", 1) < Len(z) Then
-'                    d = InStr(InStr(1, z, "Sum(", 1), z, ")", 1) + 1
-'                    y = Left(z, InStr(InStr(1, z, "Sum(", 1), z, ")", 1)) '//result formula =+C1+C2
-'                End If
-''                y = "" '//result formula =+C1+C2
-'                x = "" '//incremental string when a digit is numeric
-''                d = 1
-'                Do While d <= Len(z)
-'                    If Mid(z, d, 1) = " " Then
-'                        y = y + " "
-'                    ElseIf Not IsNumeric(Mid(z, d, 1)) Then
-'                        If Len(x) > 0 Then
-'                            For e = 1 To totMyMap
-'                                If Trim(Str(myMap(e, 1))) = x Then
-'                                    x = Trim(Str(myMap(e, 3)))
-'                                    Exit For
-'                                End If
-'                            Next e
-'                            y = y + x
-'                            x = ""
-'                        End If
-'                        y = y + Mid(z, d, 1)
-'                    ElseIf IsNumeric(Mid(z, d, 1)) Then
-'                        x = x + Mid(z, d, 1)
-'                        If d = Len(z) And Len(x) > 0 Then
-'                            For e = 1 To totMyMap
-'                                If Trim(Str(myMap(e, 1))) = x Then
-'                                    x = Trim(Str(myMap(e, 3)))
-'                                    Exit For
-'                                End If
-'                            Next e
-'                            y = y + x
-'                        End If
-'                    End If
-'                    d = d + 1
-'                Loop
-'                trndNew(a, 5) = y
+        End If
+'            If a = 203 Then
+'                MsgBox trndNew(a, 5)
 '            End If
-'        End If
-'    Next a
-'
-'    For a = 1 To totTrndNew
-'        If InStr(1, trndNew(a, 1), "2013-2014 Goodwill ifer - 1 month", 1) > 0 Or trndNew(a, 1) = "Retained earnings this year" Or ((Not IsNumeric(trndNew(a, 1))) And Len(trndNew(a, 2)) = 0 And InStr(1, trndNew(a, 3), "=", 1)) Then
-'            If a = 11 Then
-'                MsgBox a '//trndNew(a, 3)
-'            End If
-'            trndNew(a, 5) = trndNew(a, 3)
-'            z = trndNew(a, 3) '//original formula =+ 1+ 2
-'                y = "" '//result formula =+C1+C2
-'                x = "" '//incremental string when a digit is numeric
-'                d = 1
-'                If InStr(1, z, "'!", 1) > 0 Then
-'                    d = InStr(InStr(1, z, "'!", 1), z, "+", 1)
-'                    y = Left(z, d - 1)
-'                End If
-'                Do While d <= Len(z)
-'                    If Mid(z, d, 1) = " " Then
-'                        y = y + " "
-'                    ElseIf Not IsNumeric(Mid(z, d, 1)) Then
-'                        If Len(x) > 0 Then
-'                            For e = 1 To totMyMap
-'                                If Trim(Str(myMap(e, 1))) = x Then
-'                                    x = Trim(Str(myMap(e, 3)))
-'                                    Exit For
-'                                End If
-'                            Next e
-'                            If Len(myMap(e, 2)) = 0 Then
-'                                y = Left(y, Len(y) - 2)
-'                                x = ""
-'                            End If
-'                            y = y & x
-'                            x = ""
-'                        End If
-'                        y = y + Mid(z, d, 1)
-'                        If Mid(z, d, 1) = "/" Then
-'                            Exit Do
-'                        End If
-'
-'                    ElseIf IsNumeric(Mid(z, d, 1)) Then
-'                        x = x + Mid(z, d, 1)
-'                        If d = Len(z) And Len(x) > 0 Then
-'                            For e = 1 To totMyMap
-'                                If Trim(Str(myMap(e, 1))) = x Then
-'                                    x = Trim(Str(myMap(e, 3)))
-'                                    Exit For
-'                                End If
-'                            Next e
-'                            If Len(myMap(e, 2)) = 0 Then
-'                                y = Left(y, Len(y) - 2)
-'                                x = ""
-'                            End If
-'                            y = y & x
-'                        End If
-'                    End If
-'                    d = d + 1
-'                Loop
-'                If Mid(z, d, 1) = "/" Then
-'                    y = y & Right(z, Len(z) - d)
-''                ElseIf d > Len(z) Then
-'                End If
-'                trndNew(a, 5) = y
-''            End If
-'        End If
-''            If a = 203 Then
-''                MsgBox trndNew(a, 5)
-''            End If
-'    Next a
+    Next a
 
      '//CREATE A NEW TAB "REPORT_new1"
      mySheetName = "REPORT_new1"
@@ -509,11 +585,11 @@ Sub balSh_backup()
 ''     Next a
 '''
      '//MAKE SURE THE trnd() CORRECT
-     For a = 1 To totTrnd
-         For b = 1 To 4
-             Cells(a, b) = trnd(a, b)
-         Next b
-     Next a
+'     For a = 1 To totTrnd
+'         For b = 1 To 4
+'             Cells(a, b) = trnd(a, b)
+'         Next b
+'     Next a
 
 ''     '//MAKE SURE THE trndNew() CORRECT
 ''     For a = 1 To totTrndNew
@@ -523,11 +599,11 @@ Sub balSh_backup()
 ''     Next a
 '''
 ''     '//MAKE SURE THE myMap() CORRECT
-'     For a = 1 To totMyMap
-'         For b = 1 To 4
-'             Cells(a, b) = myMap(a, b)
-'         Next b
-'     Next a
+     For a = 1 To totMyMap
+         For b = 1 To 4
+             Cells(a, b) = myMap(a, b)
+         Next b
+     Next a
 '''
 '''      '//MAKE SURE inpt() inptPrior() are correct
 ''''      For a = 1 To totInpt
@@ -585,36 +661,36 @@ Sub balSh_backup()
             Cells(a, 3) = trndNew(a, 2)
             Cells(a, 4) = trndNew(a, 3)
             zz = trndNew(a, 3)
-            Cells(a, 5) = trndNew(a, 4)
-            Cells(a, 6) = trndNew(a, 5)
-'            If Len(trndNew(a, 5)) > 0 Then
-'                zz = trndNew(a, 5)
-'            End If
-'
-'            For b = 1 To 2
-'                z = zz
-'
-'                y = ColNumToLetter(b + 3)
-'                d = 1
-'                If InStr(1, z, "!", 1) > 0 Then
-'                    d = InStr(InStr(1, z, "!", 1), z, "+", 1)
-'                End If
-'
-'                Do While d <= Len(z)
-'                    d = d + 1
-'                    If Mid(z, d, 1) = " " Then
-'                        z = Left(z, d - 1) & y & Right(z, Len(z) - d)
-'
-'                    End If
-'                Loop
-'
-'                If Left(z, 1) = "'" Then
-'                    z = Right(z, Len(z) - 1)
-'                End If
-'
-'                Cells(a, y) = z
-'
-'            Next b
+'            Cells(a, 5) = trndNew(a, 4)
+'            Cells(a, 6) = trndNew(a, 5)
+            If Len(trndNew(a, 5)) > 0 Then
+                zz = trndNew(a, 5)
+            End If
+
+            For b = 1 To 2
+                z = zz
+
+                y = ColNumToLetter(b + 3)
+                d = 1
+                If InStr(1, z, "!", 1) > 0 Then
+                    d = InStr(InStr(1, z, "!", 1), z, "+", 1)
+                End If
+
+                Do While d <= Len(z)
+                    d = d + 1
+                    If Mid(z, d, 1) = " " Then
+                        z = Left(z, d - 1) & y & Right(z, Len(z) - d)
+
+                    End If
+                Loop
+
+                If Left(z, 1) = "'" Then
+                    z = Right(z, Len(z) - 1)
+                End If
+
+                Cells(a, y) = z
+
+            Next b
 '''                If Len(trndNew(a, 4)) > 0 Then
 '''                    Cells(a, 9) = "=" & inptBdgt(1, 2) & "!" & inptBdgt(1, 3) & Trim(Str(trndNew(a, 4)))
 '''                    If f = 2 Then
@@ -626,7 +702,7 @@ Sub balSh_backup()
 '''                    End If
 '''                End If
 ''
-'                If (Not IsNumeric(trndNew(a, 3))) And Len(trndNew(a, 3)) > 0 Then
+                If (Not IsNumeric(trndNew(a, 3))) And Len(trndNew(a, 3)) > 0 Then
 ''                    myStr = trndNew(a, 3)
 ''                    For d = 2 To Len(myStr)
 ''                        myStr = Left(myStr, InStr(1, myStr, " ", 1) - 1) & "D" & Right(myStr, Len(myStr) - InStr(1, myStr, " ", 1))
@@ -645,13 +721,13 @@ Sub balSh_backup()
 ''                    Next d
 ''                    Cells(a, 8) = Right(myStr, Len(myStr) - 1)
 ''                ElseIf IsNumeric(trndNew(a, 3)) And IsNumeric(trndNew(a, 2)) And Len(trndNew(a, 1)) > 0 And Len(trndNew(a, 2)) > 0 And Len(trndNew(a, 3)) > 0 Then
-'                ElseIf IsNumeric(trndNew(a, 3)) And (IsNumeric(trndNew(a, 2)) Or InStr(1, trndNew(a, 2), "(", 1) > 0) And Len(trndNew(a, 1)) > 0 And Len(trndNew(a, 2)) > 0 And Len(trndNew(a, 3)) > 0 Then
+                ElseIf IsNumeric(trndNew(a, 3)) And (IsNumeric(trndNew(a, 2)) Or InStr(1, trndNew(a, 2), "(", 1) > 0) And Len(trndNew(a, 1)) > 0 And Len(trndNew(a, 2)) > 0 And Len(trndNew(a, 3)) > 0 Then
 '
-'                    Cells(a, 4) = "='" & inpt(f, 1, 2) & "'!" & inpt(f, 1, 3) & Trim(Str(trndNew(a, 3)))
-'                    Cells(a, 5) = "='" & inpt(f, 13, 2) & "'!" & inpt(f, 13, 3) & Trim(Str(trndNew(a, 3)))
+                    Cells(a, 4) = "='" & inpt(f, 1, 2) & "'!" & inpt(f, 1, 3) & Trim(Str(trndNew(a, 3)))
+                    Cells(a, 5) = "='" & inpt(f, 13, 2) & "'!" & inpt(f, 13, 3) & Trim(Str(trndNew(a, 3)))
 ''                    Cells(a, 8) = "='" & inpt(f, 1, 2) & "'!" & inpt(f, 1, 3) & Trim(Str(trndNew(a, 3)))
 ''                    Cells(a, 4) = "='" & inpt(f, 13, 2) & "'!" & inpt(f, 13, 3) & Trim(Str(trndNew(a, 3)))
-'                End If
+                End If
 ''
 '''                 myStr = trndNew(a, 15)
 '''                 For d = 2 To Len(myStr)
@@ -671,7 +747,7 @@ Sub balSh_backup()
 '''    '                    Cells(a, 9) = myStr
 '''    '                End If
 ''                 If InStr(1, trndNew(a, 3), ":", 1) > 0 Or InStr(1, trndNew(a, 3), "+", 1) > 0 Or InStr(1, trndNew(a, 3), "/", 1) > 0 Or trndNew(a, 1) = "Provisions for warranty" Then
-'                  If Len(trndNew(a, 1)) > 0 And IsNumeric(Cells(a, 4)) And Len(Cells(a, 4)) > 0 Then
+                  If Len(trndNew(a, 1)) > 0 And IsNumeric(Cells(a, 4)) And Len(Cells(a, 4)) > 0 Then
 '''                    If InStr(1, myTab(1), "Ytd", 1) > 0 Then
 '''                        myStr = "="
 '''                        For b = 1 To totInptBdgt
@@ -685,18 +761,18 @@ Sub balSh_backup()
 '''                            Cells(a, 9) = trndNew(a, 17)
 '''                        End If
 '''                    End If
-'                    Cells(a, 6) = "=D" & Trim(Str(a)) & "-E" & Trim(Str(a))
-'                    Cells(a, 7) = "=F" & Trim(Str(a)) & "/E" & Trim(Str(a))
+                    Cells(a, 6) = "=D" & Trim(Str(a)) & "-E" & Trim(Str(a))
+                    Cells(a, 7) = "=F" & Trim(Str(a)) & "/E" & Trim(Str(a))
 ''                    Cells(a, 10) = "=H" & Trim(Str(a)) & "-I" & Trim(Str(a))
 ''                    Cells(a, 11) = "=J" & Trim(Str(a)) & "/I" & Trim(Str(a))
-'                 End If
-'                 If Len(trndNew(a, 3)) > 0 And InStr(1, trndNew(a, 4), ":", 1) > 0 Then
-'                    Rows(trndNew(a, 4)).Group
+                 End If
+                 If Len(trndNew(a, 3)) > 0 And InStr(1, trndNew(a, 4), ":", 1) > 0 Then
+                    Rows(trndNew(a, 4)).Group
 '                     'Hide groups
-'                    ActiveSheet.Outline.ShowLevels RowLevels:=1
+                    ActiveSheet.Outline.ShowLevels RowLevels:=1
 '                     'Show groups
 '        '            ActiveSheet.Outline.ShowLevels RowLevels:=2
-'                 End If
+                 End If
 '''                 For b = 1 To totInptBdgt
 '''                     Cells(a, b + 16) = trndNew(a, b + 16)
 '''                 Next b
@@ -739,10 +815,10 @@ Sub balSh_backup()
 ''                    Cells(c, b) = myHead(c, b)
 ''                Next b
 ''            Next c
-'            Cells(9, 4) = "CURRENT MONTH"
-'            Cells(9, 5) = "PY CURRENT MONTH"
-'            Cells(9, 6) = "$ Change"
-'            Cells(9, 7) = "% Change"
+            Cells(9, 4) = "CURRENT MONTH"
+            Cells(9, 5) = "PY CURRENT MONTH"
+            Cells(9, 6) = "$ Change"
+            Cells(9, 7) = "% Change"
 '
 '
 ''            y = "G:G"
@@ -878,8 +954,6 @@ Function SumToAdd(x) As String
                 ElseIf InStr(1, frmlStr, "sum(", 1) = 0 Then
                 End If
 End Function
-
-
 
 
 
