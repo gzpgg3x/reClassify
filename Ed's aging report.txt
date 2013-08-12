@@ -1,0 +1,117 @@
+Sub reFormat()
+    Reset
+    '//GOAL: REFORMAT
+    '//DATE: 5:30 PM 08082013
+    '//STEP: FIND THE LAST ROW,
+    '//Len(Cells(a, "A")) > 0 And Or IsNumeric(Right(Cells(a, "A"), Len(Cells(a, "A")) - 1))
+
+'    Dim a As Integer
+    Dim z, y As String
+    Dim raw(90000, 12)
+    Dim custNo As Variant 'Long
+    Dim LastRow As Long
+    Dim a, b As Long
+    
+    '//READ RAW DATA
+    LastRow = ActiveSheet.UsedRange.Rows.Count
+'    MsgBox LastRow
+
+    custNo = 0
+    b = 0
+    For a = 4 To LastRow
+        If Len(Cells(a, "A")) > 0 Then
+            If IsNumeric(Right(Cells(a, "A"), Len(Cells(a, "A")) - 1)) Then
+                If InStr(1, Cells(a - 3, "A"), "CUST/", 1) > 0 And InStr(1, Cells(a - 2, "A"), "INV", 1) > 0 And Len(Cells(a, "B")) = 0 Then
+                    custNo = Cells(a, "A")
+                End If
+            End If
+            
+        End If
+    
+    
+            If IsNumeric(Cells(a, "A")) Then
+                If InStr(1, Cells(a - 3, "A"), "CUST/", 1) > 0 And InStr(1, Cells(a - 2, "A"), "INV", 1) > 0 And Len(Cells(a, "B")) = 0 Then
+                    custNo = Cells(a, "A")
+                End If
+            
+                If Len(Cells(a, "B")) > 0 Then
+                        b = b + 1
+                    raw(b, 1) = custNo
+                    raw(b, 2) = Cells(a, "A")
+                    raw(b, 3) = Cells(a, "D")
+                    raw(b, 4) = Cells(a, "E")
+                    raw(b, 5) = Cells(a, "N")
+                    raw(b, 6) = Cells(a, "F")
+                    raw(b, 7) = Cells(a, "G")
+                    raw(b, 8) = Cells(a, "I")
+                    raw(b, 9) = Cells(a, "J")
+                    raw(b, 10) = Cells(a, "K")
+                    raw(b, 11) = Cells(a, "L")
+                    raw(b, 12) = Cells(a, "M")
+                    
+                End If
+            End If
+    
+    Next a
+    totRaw = b
+'    MsgBox totRaw
+    
+     '//CREATE A NEW TAB "REPORT_new1"
+     mySheetName = "REPORT_new1"
+     Application.DisplayAlerts = False
+     On Error Resume Next
+     Worksheets(mySheetName).Delete
+     Err.Clear
+     Application.DisplayAlerts = True
+     Worksheets.Add.Name = mySheetName
+     
+     Cells(1, 1) = "CUST #"
+     Cells(1, 2) = "REF #"
+     Cells(1, 3) = "Date"
+     Cells(1, 4) = "Due Date"
+     Cells(1, 5) = "Patient"
+     Cells(1, 6) = "Type"
+     Cells(1, 7) = "Amount"
+     Cells(1, 8) = "Current"
+     Cells(1, 9) = "30 days"
+     Cells(1, 10) = "60 days"
+     Cells(1, 11) = "90 days"
+     Cells(1, 12) = "120 days"
+     
+     For a = 1 To totRaw
+         For b = 1 To 12
+             Cells(a + 1, b) = raw(a, b)
+         Next b
+     Next a
+     
+     Cells(totRaw + 3, "A") = "TOTALS"
+     Cells(totRaw + 3, "G") = "=SUM(G" & Trim(Str(2)) & ":G" & Trim(Str(totRaw + 1)) & ")"
+     Cells(totRaw + 3, "H") = "=SUM(H" & Trim(Str(2)) & ":H" & Trim(Str(totRaw + 1)) & ")"
+     Cells(totRaw + 3, "I") = "=SUM(I" & Trim(Str(2)) & ":I" & Trim(Str(totRaw + 1)) & ")"
+     Cells(totRaw + 3, "J") = "=SUM(J" & Trim(Str(2)) & ":J" & Trim(Str(totRaw + 1)) & ")"
+     Cells(totRaw + 3, "K") = "=SUM(K" & Trim(Str(2)) & ":K" & Trim(Str(totRaw + 1)) & ")"
+     Cells(totRaw + 3, "L") = "=SUM(L" & Trim(Str(2)) & ":L" & Trim(Str(totRaw + 1)) & ")"
+'     Cells(totRaw + 3, "A") = "=SUM(G" & Trim(Str(2)) & ":G" & Trim(Str(totRaw)) & ")"
+
+     z = "G2:L" & Trim(Str(totRaw + 3))
+
+'     Range(z).NumberFormat = "#,##0.00"
+'     Range(z).NumberFormat = "0;(0)"
+     
+     Range(z).NumberFormat = "#,##0.00;[RED](#,##0.00)"
+     
+     
+     z = "A1:L" & Trim(Str(totRaw + 3))
+'     MsgBox z
+     ActiveSheet.Range(z).Select
+
+     Selection.Borders.LineStyle = xlContinuous
+     
+     
+     Range("A1:L1").Font.Bold = True
+     Range("A1:L1").Font.Underline = True
+     
+
+End Sub
+
+
