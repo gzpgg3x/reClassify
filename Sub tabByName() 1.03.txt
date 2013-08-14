@@ -1,0 +1,139 @@
+Sub tabByName()
+    '//GOAL: BREAK AMEX REPORT TO TABS BY NAME
+    '//VERSION 1.01 7/12/2013 2:00PM
+    
+    Reset
+    
+    Dim a, b, c As Integer
+    Dim z, y As String
+    
+    Dim lastName(100, 2) As Variant
+    Dim myReport(2100, 22) As Variant
+    
+    '//READ EVERYTHING IN SHEET1
+    Worksheets("Sheet1").Select
+    b = 0
+    For a = 13 To 2100
+        If Len(Cells(a, 1)) + Len(Cells(a, 1)) + Len(Cells(a, 1)) = 0 Then
+            Exit For
+        End If
+        
+        b = b + 1
+        For c = 1 To 22
+            myReport(b, c) = Cells(a, c)
+        Next c
+    Next a
+    totMyReport = a - 1
+    
+    '//GET THE LASTNAMES AS TAB NAMES
+    b = 0
+    For a = 2 To totMyReport
+        If myReport(a, 3) <> myReport(a - 1, 3) And Len(myReport(a, 3)) > 0 Then
+            b = b + 1
+            lastName(b, 1) = myReport(a, 3)
+        End If
+    Next a
+    totLastName = b
+    
+    '//CREATE AND POPULATE TABS
+    c = 2
+    For a = 1 To totLastName
+        mySheetName = lastName(a, 1)
+        Application.DisplayAlerts = False
+        On Error Resume Next
+        Worksheets(mySheetName).Delete
+        Err.Clear
+        Application.DisplayAlerts = True
+        Worksheets.Add.Name = mySheetName
+        For b = 1 To 22
+            Cells(13, b) = myReport(1, b)
+        Next b
+        
+        e = 0
+        For b = c To totMyReport
+            If myReport(b, 3) = lastName(a, 1) Then
+                e = e + 1
+                For d = 1 To 22
+
+                    Cells(e + 13, d) = myReport(b, d)
+                Next d
+            ElseIf Cells(b, 3) <> lastName(a, 1) Then
+                c = b
+                lastName(a, 2) = e + 13
+'                If a = 1 Then
+'                    MsgBox lastName(a, 2)
+'                End If
+                Exit For
+            End If
+        Next b
+        
+'        Cells(13, "W") = "Reason/Description for Expense"
+'        Cells(13, "X") = "Customer Account # is Customer Related Expense"
+'
+'        ActiveSheet.Range("P:P").Select
+'        Selection.NumberFormat = "mm/dd/yy"
+'
+'        Columns("T:T").Delete Shift:=xlToLeft
+'        Columns("I:O").Delete Shift:=xlToLeft
+'        Columns("F:G").Delete Shift:=xlToLeft
+'        Columns("B:B").Delete Shift:=xlToLeft
+    Next a
+    
+    '//COPY FORMAT FROM (SOURCE TAB) TO (TARGET TAB)
+    For a = 1 To totLastName
+        Rng = "A13:V" & Trim(Str(lastName(a, 2)))
+'        Rng = "A13:V" & Trim(Str(totMyReport))
+        Sheets("Sheet1").Range(Rng).Copy
+        Sheets(lastName(a, 1)).Range(Rng).PasteSpecial xlPasteFormats
+        
+'        Cells(13, "W") = "Reason/Description for Expense"
+'        Cells(13, "X") = "Customer Account # is Customer Related Expense"
+'
+'        ActiveSheet.Range("P:P").Select
+'        Selection.NumberFormat = "mm/dd/yy"
+'
+'        Columns("T:T").Delete Shift:=xlToLeft
+'        Columns("I:O").Delete Shift:=xlToLeft
+'        Columns("F:G").Delete Shift:=xlToLeft
+'        Columns("B:B").Delete Shift:=xlToLeft
+    Next a
+    
+    '//DELETE/ADD/REFORMAT SOME COLUMNS
+    For a = 1 To totLastName
+        Worksheets(lastName(a, 1)).Select
+        Cells(13, "W") = "Reason/Description for Expense"
+        Cells(13, "X") = "Customer Account # is Customer Related Expense"
+        
+        Sheets(lastName(a, 1)).Range("V13").Copy
+        Sheets(lastName(a, 1)).Range("W13").PasteSpecial xlPasteFormats
+        Sheets(lastName(a, 1)).Range("X13").PasteSpecial xlPasteFormats
+
+        ActiveSheet.Range("P:P").Select
+        Selection.NumberFormat = "mm/dd/yy"
+
+        Columns("T:T").Delete Shift:=xlToLeft
+        Columns("I:O").Delete Shift:=xlToLeft
+        Columns("F:G").Delete Shift:=xlToLeft
+        Columns("B:B").Delete Shift:=xlToLeft
+    Next a
+    
+    
+    '//WRITE TO TEST TAB
+'    mySheetName = "testTab"
+'    Application.DisplayAlerts = False
+'    On Error Resume Next
+'    Worksheets(mySheetName).Delete
+'    Err.Clear
+'    Application.DisplayAlerts = True
+'    Worksheets.Add.Name = mySheetName
+    
+'    For a = 1 To totMyReport
+'        For b = 1 To 22
+'            Cells(a, b) = myReport(a, b)
+'        Next b
+'    Next a
+
+'    For a = 1 To totLastName
+'        Cells(a, 1) = lastName(a)
+'    Next a
+End Sub
