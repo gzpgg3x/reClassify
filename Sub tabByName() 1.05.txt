@@ -29,7 +29,7 @@ Sub tabByName()
     Worksheets("Sheet1").Select
     b = 0
     For a = 13 To 2100
-        If Len(Cells(a, 1)) + Len(Cells(a, 1)) + Len(Cells(a, 1)) = 0 Then
+        If Len(Cells(a, 1)) + Len(Cells(a, 2)) + Len(Cells(a, 3)) = 0 Then
             Exit For
         End If
         
@@ -39,6 +39,7 @@ Sub tabByName()
         Next c
     Next a
     totMyReport = a - 1
+    MsgBox totMyReport
     
     '//GET THE LASTNAMES AS TAB NAMES
     b = 0
@@ -131,118 +132,131 @@ Sub tabByName()
                 c = c + 1
                 addr(c, 1) = Cells(a, 1)
                 addr(c, 2) = Cells(a, 2)
+                addr(c, 3) = Cells(a, 3)
                 Exit For
             End If
         Next a
     Next b
+    totAddr = c
 
     '//READ IN CARDHOLDER'S RESPONSE DEADLINE
     mailBody = Cells(3, "L")
     mailBody = "Attached you will find the listing of your American Express charges for the month. Please review and submit both detailed explanations and the corresponding receipts for each charge to US APAccounting (APAccounting@widexusa.com) no later than " & mailBody & ".  Explanations should include, when applicable, Customer Name, Number and Ranking. Employees who fail to comply with this procedure may be subject to a delay, withholding or chargeback of expense reimbursements."
 
-    '//GENERATE AUTOMATIC EMAILS
-    For a = 1 To c
-        With Application
-            .ScreenUpdating = False
-            .EnableEvents = False
-        End With
-
-        Set Sourcewb = ActiveWorkbook
-
-        ' Next, copy the sheet to a new workbook.
-        ' You can also use the following line, instead of using the ActiveSheet object,
-       ' if you know the name of the sheet you want to mail :
-        ' Sheets("Sheet5").Copy
-'        sht(a) = "Sheet" & Trim(Str(a))
-        Worksheets(addr(a, 1)).Select
-        ActiveSheet.Copy
-        Set Destwb = ActiveWorkbook
-
-        ' Determine the Excel version, and file extension and format.
-        With Destwb
-            If Val(Application.Version) < 12 Then
-                ' For Excel 2000-2003
-                FileExtStr = ".xls": FileFormatNum = -4143
-            Else
-                ' For Excel 2007-2010, exit the subroutine if you answer
-                ' NO in the security dialog that is displayed when you copy
-                ' a sheet from an .xlsm file with macros disabled.
-                If Sourcewb.Name = .Name Then
-                    With Application
-                        .ScreenUpdating = True
-                        .EnableEvents = True
-                    End With
-                    MsgBox "You answered NO in the security dialog."
-                    Exit Sub
-                Else
-                    Select Case Sourcewb.FileFormat
-                    Case 51: FileExtStr = ".xlsx": FileFormatNum = 51
-                    Case 52:
-                        If .HasVBProject Then
-                            FileExtStr = ".xlsm": FileFormatNum = 52
-                        Else
-                            FileExtStr = ".xlsx": FileFormatNum = 51
-                        End If
-                    Case 56: FileExtStr = ".xls": FileFormatNum = 56
-                    Case Else: FileExtStr = ".xlsb": FileFormatNum = 50
-                    End Select
-                End If
+    '//ADD COLUMN IN "Sheet1" FOR TRAINER/SALES/ADMIN/OPERATIONS
+    Worksheets("Sheet1").Select
+    For a = 14 To totMyReport
+        For b = 1 To totAddr
+            If Cells(a, 3) = addr(b, 1) Then
+                Cells(a, 40) = addr(b, 3)
+                Exit For
             End If
-        End With
-
-        ' You can use the following statements to change all cells in the
-       ' worksheet to values.
-        '    With Destwb.Sheets(1).UsedRange
-        '        .Cells.Copy
-        '        .Cells.PasteSpecial xlPasteValues
-        '        .Cells(1).Select
-        '    End With
-        '    Application.CutCopyMode = False
-
-        ' Save the new workbook, mail, and then delete it.
-        TempFilePath = Environ$("temp") & "\"
-        TempFileName = Sourcewb.Name & " " & "_" & addr(a, 1) '//& " " & Format(Now, "dd-mmm-yy h-mm-ss")
-
-
-        Set OutApp = CreateObject("Outlook.Application")
-
-        Set OutMail = OutApp.CreateItem(0)
-
-        With Destwb
-            .SaveAs TempFilePath & TempFileName & FileExtStr, _
-                    FileFormat:=FileFormatNum
-            On Error Resume Next
-           ' Change the mail address and subject in the macro before
-           ' running the procedure.
-            With OutMail
-                .To = addr(a, 2)
-                .CC = ""
-                .BCC = ""
-                .Subject = "Amex Card Report"
-                .body = mailBody
-                .Attachments.Add Destwb.FullName
-                ' You can add other files by uncommenting the following statement.
-                '.Attachments.Add ("C:\test.txt")
-                ' In place of the following statement, you can use ".Display" to
-                ' display the mail.
-'                .Send
-                .Display
-            End With
-            On Error GoTo 0
-            .Close SaveChanges:=False
-        End With
-
-        ' Delete the file after sending.
-        Kill TempFilePath & TempFileName & FileExtStr
-
-        Set OutMail = Nothing
-        Set OutApp = Nothing
-
-        With Application
-            .ScreenUpdating = True
-            .EnableEvents = True
-        End With
+        Next b
     Next a
+
+'    '//GENERATE AUTOMATIC EMAILS
+'    For a = 1 To totAddr
+'        With Application
+'            .ScreenUpdating = False
+'            .EnableEvents = False
+'        End With
+'
+'        Set Sourcewb = ActiveWorkbook
+'
+'        ' Next, copy the sheet to a new workbook.
+'        ' You can also use the following line, instead of using the ActiveSheet object,
+'       ' if you know the name of the sheet you want to mail :
+'        ' Sheets("Sheet5").Copy
+''        sht(a) = "Sheet" & Trim(Str(a))
+'        Worksheets(addr(a, 1)).Select
+'        ActiveSheet.Copy
+'        Set Destwb = ActiveWorkbook
+'
+'        ' Determine the Excel version, and file extension and format.
+'        With Destwb
+'            If Val(Application.Version) < 12 Then
+'                ' For Excel 2000-2003
+'                FileExtStr = ".xls": FileFormatNum = -4143
+'            Else
+'                ' For Excel 2007-2010, exit the subroutine if you answer
+'                ' NO in the security dialog that is displayed when you copy
+'                ' a sheet from an .xlsm file with macros disabled.
+'                If Sourcewb.Name = .Name Then
+'                    With Application
+'                        .ScreenUpdating = True
+'                        .EnableEvents = True
+'                    End With
+'                    MsgBox "You answered NO in the security dialog."
+'                    Exit Sub
+'                Else
+'                    Select Case Sourcewb.FileFormat
+'                    Case 51: FileExtStr = ".xlsx": FileFormatNum = 51
+'                    Case 52:
+'                        If .HasVBProject Then
+'                            FileExtStr = ".xlsm": FileFormatNum = 52
+'                        Else
+'                            FileExtStr = ".xlsx": FileFormatNum = 51
+'                        End If
+'                    Case 56: FileExtStr = ".xls": FileFormatNum = 56
+'                    Case Else: FileExtStr = ".xlsb": FileFormatNum = 50
+'                    End Select
+'                End If
+'            End If
+'        End With
+'
+'        ' You can use the following statements to change all cells in the
+'       ' worksheet to values.
+'        '    With Destwb.Sheets(1).UsedRange
+'        '        .Cells.Copy
+'        '        .Cells.PasteSpecial xlPasteValues
+'        '        .Cells(1).Select
+'        '    End With
+'        '    Application.CutCopyMode = False
+'
+'        ' Save the new workbook, mail, and then delete it.
+'        TempFilePath = Environ$("temp") & "\"
+'        TempFileName = Sourcewb.Name & " " & "_" & addr(a, 1) '//& " " & Format(Now, "dd-mmm-yy h-mm-ss")
+'
+'
+'        Set OutApp = CreateObject("Outlook.Application")
+'
+'        Set OutMail = OutApp.CreateItem(0)
+'
+'        With Destwb
+'            .SaveAs TempFilePath & TempFileName & FileExtStr, _
+'                    FileFormat:=FileFormatNum
+'            On Error Resume Next
+'           ' Change the mail address and subject in the macro before
+'           ' running the procedure.
+'            With OutMail
+'                .To = addr(a, 2)
+'                .CC = ""
+'                .BCC = ""
+'                .Subject = "Amex Card Report"
+'                .body = mailBody
+'                .Attachments.Add Destwb.FullName
+'                ' You can add other files by uncommenting the following statement.
+'                '.Attachments.Add ("C:\test.txt")
+'                ' In place of the following statement, you can use ".Display" to
+'                ' display the mail.
+''                .Send
+'                .Display
+'            End With
+'            On Error GoTo 0
+'            .Close SaveChanges:=False
+'        End With
+'
+'        ' Delete the file after sending.
+'        Kill TempFilePath & TempFileName & FileExtStr
+'
+'        Set OutMail = Nothing
+'        Set OutApp = Nothing
+'
+'        With Application
+'            .ScreenUpdating = True
+'            .EnableEvents = True
+'        End With
+'    Next a
 
 End Sub
 
