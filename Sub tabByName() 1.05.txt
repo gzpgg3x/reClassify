@@ -1,0 +1,251 @@
+Sub tabByName()
+    '//GOAL: BREAK AMEX REPORT TO TABS BY NAME
+    '//VERSION 1.01 7/12/2013 2:00PM
+    '//VERSION 1.02 8/13/2013 4:14PM
+    '//VERSION 1.03 8/13/2013 5:28PM
+    '//VERSION 1.04 8/14/2013 11:55AM
+    '//VERSION 1.05 8/15/2013 3:04PM ADD 7 EXTRA COLUMNS IN EACH INDIVIDUAL CARDHOLDER'S TAB
+        
+    Reset
+    
+    Dim a, b, c As Integer
+    Dim z, y As String
+    Dim lastName(100, 2) As Variant
+    Dim myReport(2100, 22) As Variant
+    Dim LastRow As Integer
+    
+    Dim FileExtStr As String
+    Dim FileFormatNum As Long
+    Dim Sourcewb As Workbook
+    Dim Destwb As Workbook
+    Dim TempFilePath As String
+    Dim TempFileName As String
+    Dim OutApp As Object
+    Dim OutMail As Object
+    Dim addr(100, 3) As Variant
+    Dim mailBody As String
+    
+    '//READ EVERYTHING IN SHEET1
+    Worksheets("Sheet1").Select
+    b = 0
+    For a = 13 To 2100
+        If Len(Cells(a, 1)) + Len(Cells(a, 1)) + Len(Cells(a, 1)) = 0 Then
+            Exit For
+        End If
+        
+        b = b + 1
+        For c = 1 To 22
+            myReport(b, c) = Cells(a, c)
+        Next c
+    Next a
+    totMyReport = a - 1
+    
+    '//GET THE LASTNAMES AS TAB NAMES
+    b = 0
+    For a = 2 To totMyReport
+        If myReport(a, 3) <> myReport(a - 1, 3) And Len(myReport(a, 3)) > 0 Then
+            b = b + 1
+            lastName(b, 1) = myReport(a, 3)
+        End If
+    Next a
+    totLastName = b
+    
+    '//CREATE AND POPULATE TABS
+    c = 2
+    For a = 1 To totLastName
+        mySheetName = lastName(a, 1)
+        Application.DisplayAlerts = False
+        On Error Resume Next
+        Worksheets(mySheetName).Delete
+        Err.Clear
+        Application.DisplayAlerts = True
+        Worksheets.Add.Name = mySheetName
+        For b = 1 To 22
+            Cells(13, b) = myReport(1, b)
+        Next b
+        
+        e = 0
+        For b = c To totMyReport
+            If myReport(b, 3) = lastName(a, 1) Then
+                e = e + 1
+                For d = 1 To 22
+
+                    Cells(e + 13, d) = myReport(b, d)
+                Next d
+            ElseIf myReport(b, 3) <> lastName(a, 1) Then
+                c = b
+                lastName(a, 2) = e + 13
+                Exit For
+            End If
+        Next b
+    Next a
+    
+    '//COPY FORMAT FROM (SOURCE TAB) TO (TARGET TAB)
+    For a = 1 To totLastName
+        Rng = "A13:V" & Trim(Str(lastName(a, 2)))
+        Sheets("Sheet1").Range(Rng).Copy
+        Sheets(lastName(a, 1)).Range(Rng).PasteSpecial xlPasteFormats
+    Next a
+    
+    '//DELETE/ADD/REFORMAT SOME COLUMNS
+    For a = 1 To totLastName
+        Worksheets(lastName(a, 1)).Select
+'        Cells(13, "W") = "Reason/Description for Expense"
+'        Cells(13, "X") = "Customer Account # is Customer Related Expense"
+
+        Cells(13, "W") = "Nature of the transaction (meal, entertainment, etc.)"
+        Cells(13, "X") = "Function being attended (sales call, convention, etc.)"
+        Cells(13, "Y") = "Name & location of where meal or event took place"
+        Cells(13, "Z") = "Customers/Suppliers business name, customer number"
+        Cells(13, "AA") = "Name of individuals being entertained"
+        Cells(13, "AB") = "ENT (y/n)"
+        Cells(13, "AC") = "Additional info"
+        
+        Sheets(lastName(a, 1)).Range("V13").Copy
+        Sheets(lastName(a, 1)).Range("W13").PasteSpecial xlPasteFormats
+        Sheets(lastName(a, 1)).Range("X13").PasteSpecial xlPasteFormats
+        Sheets(lastName(a, 1)).Range("Y13").PasteSpecial xlPasteFormats
+        Sheets(lastName(a, 1)).Range("Z13").PasteSpecial xlPasteFormats
+        Sheets(lastName(a, 1)).Range("AA13").PasteSpecial xlPasteFormats
+        Sheets(lastName(a, 1)).Range("AB13").PasteSpecial xlPasteFormats
+        Sheets(lastName(a, 1)).Range("AC13").PasteSpecial xlPasteFormats
+        Sheets(lastName(a, 1)).Range("AD13").PasteSpecial xlPasteFormats
+
+        ActiveSheet.Range("P:P").Select
+        Selection.NumberFormat = "mm/dd/yy"
+
+        Columns("T:T").Delete Shift:=xlToLeft
+        Columns("I:O").Delete Shift:=xlToLeft
+        Columns("F:G").Delete Shift:=xlToLeft
+        Columns("B:B").Delete Shift:=xlToLeft
+    Next a
+    
+    '//READ EMAIL ADDRESSES FROM CARDHOLDERS
+    Worksheets("ADDRESS").Select
+    LastRow = ActiveSheet.UsedRange.Rows.Count
+
+    c = 0
+    For b = 1 To totLastName
+        For a = 1 To LastRow
+            If lastName(b, 1) = Cells(a, 1) Then
+                c = c + 1
+                addr(c, 1) = Cells(a, 1)
+                addr(c, 2) = Cells(a, 2)
+                Exit For
+            End If
+        Next a
+    Next b
+
+    '//READ IN CARDHOLDER'S RESPONSE DEADLINE
+    mailBody = Cells(3, "L")
+    mailBody = "Attached you will find the listing of your American Express charges for the month. Please review and submit both detailed explanations and the corresponding receipts for each charge to US APAccounting (APAccounting@widexusa.com) no later than " & mailBody & ".  Explanations should include, when applicable, Customer Name, Number and Ranking. Employees who fail to comply with this procedure may be subject to a delay, withholding or chargeback of expense reimbursements."
+
+    '//GENERATE AUTOMATIC EMAILS
+    For a = 1 To c
+        With Application
+            .ScreenUpdating = False
+            .EnableEvents = False
+        End With
+
+        Set Sourcewb = ActiveWorkbook
+
+        ' Next, copy the sheet to a new workbook.
+        ' You can also use the following line, instead of using the ActiveSheet object,
+       ' if you know the name of the sheet you want to mail :
+        ' Sheets("Sheet5").Copy
+'        sht(a) = "Sheet" & Trim(Str(a))
+        Worksheets(addr(a, 1)).Select
+        ActiveSheet.Copy
+        Set Destwb = ActiveWorkbook
+
+        ' Determine the Excel version, and file extension and format.
+        With Destwb
+            If Val(Application.Version) < 12 Then
+                ' For Excel 2000-2003
+                FileExtStr = ".xls": FileFormatNum = -4143
+            Else
+                ' For Excel 2007-2010, exit the subroutine if you answer
+                ' NO in the security dialog that is displayed when you copy
+                ' a sheet from an .xlsm file with macros disabled.
+                If Sourcewb.Name = .Name Then
+                    With Application
+                        .ScreenUpdating = True
+                        .EnableEvents = True
+                    End With
+                    MsgBox "You answered NO in the security dialog."
+                    Exit Sub
+                Else
+                    Select Case Sourcewb.FileFormat
+                    Case 51: FileExtStr = ".xlsx": FileFormatNum = 51
+                    Case 52:
+                        If .HasVBProject Then
+                            FileExtStr = ".xlsm": FileFormatNum = 52
+                        Else
+                            FileExtStr = ".xlsx": FileFormatNum = 51
+                        End If
+                    Case 56: FileExtStr = ".xls": FileFormatNum = 56
+                    Case Else: FileExtStr = ".xlsb": FileFormatNum = 50
+                    End Select
+                End If
+            End If
+        End With
+
+        ' You can use the following statements to change all cells in the
+       ' worksheet to values.
+        '    With Destwb.Sheets(1).UsedRange
+        '        .Cells.Copy
+        '        .Cells.PasteSpecial xlPasteValues
+        '        .Cells(1).Select
+        '    End With
+        '    Application.CutCopyMode = False
+
+        ' Save the new workbook, mail, and then delete it.
+        TempFilePath = Environ$("temp") & "\"
+        TempFileName = Sourcewb.Name & " " & "_" & addr(a, 1) '//& " " & Format(Now, "dd-mmm-yy h-mm-ss")
+
+
+        Set OutApp = CreateObject("Outlook.Application")
+
+        Set OutMail = OutApp.CreateItem(0)
+
+        With Destwb
+            .SaveAs TempFilePath & TempFileName & FileExtStr, _
+                    FileFormat:=FileFormatNum
+            On Error Resume Next
+           ' Change the mail address and subject in the macro before
+           ' running the procedure.
+            With OutMail
+                .To = addr(a, 2)
+                .CC = ""
+                .BCC = ""
+                .Subject = "Amex Card Report"
+                .body = mailBody
+                .Attachments.Add Destwb.FullName
+                ' You can add other files by uncommenting the following statement.
+                '.Attachments.Add ("C:\test.txt")
+                ' In place of the following statement, you can use ".Display" to
+                ' display the mail.
+'                .Send
+                .Display
+            End With
+            On Error GoTo 0
+            .Close SaveChanges:=False
+        End With
+
+        ' Delete the file after sending.
+        Kill TempFilePath & TempFileName & FileExtStr
+
+        Set OutMail = Nothing
+        Set OutApp = Nothing
+
+        With Application
+            .ScreenUpdating = True
+            .EnableEvents = True
+        End With
+    Next a
+
+End Sub
+
+
+
+
