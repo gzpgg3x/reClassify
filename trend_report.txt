@@ -1,6 +1,7 @@
 Sub trend_report()
 
-    '//Updated 08/02/2013
+    '//Updated 08/13/2013, to top-side amortization at "AMORT EXP - GOODWILL"
+    '//Updated 09/10/2013 5:07 pm, TO ADD WORKING DAYS AND EBITDA, REFORMAT TO DENMARK REPORT
     
     Reset
    
@@ -13,7 +14,7 @@ Sub trend_report()
 '    Dim balPrior(1320, 13), bdgt(120, 13) As Variant
     Dim myMap(300, 4) As Variant '//OLD ROW, trnd(a,1)+trnd(a,2), NEW ROW, "F" FOR FORMAT
     Dim myTab(2) As Variant '//SOURCE TABS FOR TREND REPORTS AND BUDGET REPORTS
-    Dim inpt(2, 13, 5) As Variant '// YTD/MTD, CURRENT FISCAL YEAR MONTHS, INPUT PARAMETERS
+    Dim inpt(2, 13, 7) As Variant '// YTD/MTD, CURRENT FISCAL YEAR MONTHS, INPUT PARAMETERS
     Dim inptPrior(2, 12, 5) As Variant '// YTD/MTD, PRIOR FISCAL YEAR MONTHS, INPUT PARAMETERS
     Dim clss(1300, 6) As Variant '// GL CLASSIFICATION INPUT, LATER MATECHED WITH trnd TO CAPTURE BALANCE_
     '//ACCOUNT NUMBER'//ACCOUNT CLASSIFICATION'//ACCOUNT DESCRIPTION'//ROW OF CURRENT YEAR TB'//ROW OF PRIOR YEAR TB'//"M" FOR MATCHED IN TREND REPORT LINE ITEMS
@@ -44,16 +45,26 @@ Sub trend_report()
         d = 0
         For a = c To c + 12
             d = d + 1
-            For b = 1 To 5
+            For b = 1 To 6
                 inpt(f, d, b) = Cells(b + 86 + 6 * (f - 1), a) '//READ IN "Input" FOR inpt()
             Next b
+            
+            If f = 1 Then
+                inpt(f, d, 7) = Cells(106, a)
+            End If
+            
         Next a
+        
+
+        
         totInpt(f) = d
 
     Next f
     
-'    MsgBox inpt(2, 1, 5)
-'    MsgBox inpt(2, 13, 5)
+
+    MsgBox inpt(1, 1, 6)
+    MsgBox inpt(1, 1, 7)
+    MsgBox inpt(1, 13, 7)
     
 ''''''    '//MAKE SURE inpt IS CORRECT
 ''''''    For f = 1 To 2
@@ -669,6 +680,18 @@ Sub trend_report()
                     Next b
                 End If
 
+                If Cells(a, 1) = "AMORT EXP - GOODWILL" Then
+                    For b = 1 To 13
+                        Cells(a, b + 2) = inpt(f, b, 6)
+                    Next b
+                End If
+                
+                If Cells(a, 1) = "WORKING DAYS" Then
+                    For b = 1 To 13
+                        Cells(a, b + 2) = inpt(f, b, 7)
+                    Next b
+                End If
+
                  '//GROUPING ROWS
                  If Len(trndNew(a, 5)) > 0 And InStr(1, trndNew(a, 16), ":", 1) > 0 Then
                     Rows(trndNew(a, 5)).Group
@@ -696,7 +719,7 @@ Sub trend_report()
 
              '//LIST THE UNMATCHED P&L ACCOUNT IN clss() AT THE BOTTOM
         End If
-        
+
 '        '//POPULATE UNITS
 '        For a = 1 To totTrndNew
 '            If Cells(a, 1) = "NET SALES - UNITS - HEARING AIDS excl L & H" Then
